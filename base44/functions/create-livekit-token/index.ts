@@ -32,6 +32,12 @@ Deno.serve(async (req) => {
     }
 
     const role = isHost ? "host" : (member?.role ?? "participant");
+    if (member && member.participant_identity !== user.id) {
+      await base44.asServiceRole.entities.RoomMember.update(member.id, {
+        participant_identity: user.id,
+        last_seen_at: new Date().toISOString(),
+      });
+    }
     const canPublish = role !== "viewer";
     const requestedName = String(displayName ?? "").trim().slice(0, 80);
     const token = new AccessToken(apiKey, apiSecret, {

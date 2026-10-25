@@ -43,6 +43,7 @@ import {
   type ParticipantRole,
 } from "./components/MeetingModeration";
 import { useRoomLifecycle } from "./components/RoomLifecycle";
+import { useRoomRoleManagement, type AssignableRole } from "./components/RoomRoleManagement";
 import {
   useBroadcastCoordination,
   type BroadcastLayout,
@@ -292,20 +293,6 @@ function CreateRoom({ user, onClose, onCreated }: { user: UserInfo; onClose: () 
         recording_enabled: false,
         streaming_enabled: mode === "broadcast",
       }) as EventRecord;
-      await base44.entities.RoomMember.create({
-        event_id: created.id,
-        event_title: created.title,
-        event_mode: created.mode,
-        user_email: user.email,
-        display_name: user.full_name || user.email,
-        role: "host",
-        status: "joined",
-        can_publish_audio: true,
-        can_publish_video: true,
-        can_share_screen: true,
-        can_control_program: true,
-        last_seen_at: new Date().toISOString(),
-      });
       onCreated(created);
     } catch (cause) {
       setError(messageOf(cause));
@@ -341,10 +328,11 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
       setCanControlProgram(credentials.canControlProgram);
       setParticipantRole(credentials.role);
       await media.applyDevices(preferences);
-      if (preferences.microphoneEnabled) await media.setMicrophone(true);
-      if (preferences.cameraEnabled) await media.setCamera(true);
-      setMic(preferences.microphoneEnabled);
-      setCamera(preferences.cameraEnabled);
+      const canPublish = credentials.role !== "viewer";
+      if (preferences.microphoneEnabled && canPublish) await media.setMicrophone(true);
+      if (preferences.cameraEnabled && canPublish) await media.setCamera(true);
+      setMic(preferences.microphoneEnabled && canPublish);
+      setCamera(preferences.cameraEnabled && canPublish);
       setJoined(true);
       if (credentials.role === "host" && event.status === "scheduled") {
         try {
@@ -411,6 +399,22 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
     onLeave();
   }, [onLeave]);
   const { broadcastEnd } = useRoomLifecycle(media.room, connected, participantRole, handleRoomEnded);
+  const handleRoleChanged = useCallback((role: AssignableRole) => {
+    setParticipantRole(role);
+    setConnection("idle");
+    setJoined(false);
+    setMic(false);
+    setCamera(false);
+    setSharing(false);
+    setMediaMessage(`Ihre Rolle ist jetzt „${roleLabel(role)}“. Bitte treten Sie erneut bei.`);
+    window.alert(`Ihre Rolle wurde zu „${roleLabel(role)}“ geändert. Die Verbindung wird mit neuen Rechten aufgebaut.`);
+  }, []);
+  const { notifyRoleChange } = useRoomRoleManagement(media.room, connected, participantRole, handleRoleChanged);
+
+  async function assignRole(targetIdentity: string, role: AssignableRole) {
+    await base44.functions.invoke("manage-room-member", { eventId: event.id, participantIdentity: targetIdentity, role });
+    await notifyRoleChange(targetIdentity, role);
+  }
 
   async function endForAll() {
     if (!window.confirm("Veranstaltung wirklich für alle beenden? Ein erneuter Beitritt ist danach nicht möglich.")) return;
@@ -426,10 +430,11 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
   }
   if (!joined) return <PreJoin title={event.title} mode={event.mode} initialName={user.full_name || user.email} defaultCameraOn={event.default_camera_on} defaultMicrophoneOn={event.default_microphone_on} busy={connection === "connecting"} error={connection === "error" ? mediaMessage : ""} onCancel={onLeave} onJoin={connect} />;
 
-  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} localRole={participantRole} onModerationMute={handleModerationMute} onModerationRemove={handleModerationRemove} /> : <BroadcastCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} grantedControl={canControlProgram} />}<footer className="control-bar"><div className="control-group"><button disabled={!connected} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={!connected} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={!connected} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button></div><button className="connect-button" disabled>{connected ? "Verbunden" : "Verbindung getrennt"}</button><div className="leave-actions">{participantRole === "host" && <button className="end-button" onClick={() => void endForAll()}>Für alle beenden</button>}<button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></div></footer></div>;
+  const mediaDisabled = !connected || participantRole === "viewer";
+  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} localRole={participantRole} onModerationMute={handleModerationMute} onModerationRemove={handleModerationRemove} onAssignRole={assignRole} /> : <BroadcastCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} grantedControl={canControlProgram} localRole={participantRole} onAssignRole={assignRole} />}<footer className="control-bar"><div className="control-group"><button disabled={mediaDisabled} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={mediaDisabled} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={mediaDisabled} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button></div><button className="connect-button" disabled>{connected ? roleLabel(participantRole) : "Verbindung getrennt"}</button><div className="leave-actions">{participantRole === "host" && <button className="end-button" onClick={() => void endForAll()}>Für alle beenden</button>}<button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></div></footer></div>;
 }
 
-function MeetingCanvas({ room, connected, fallbackName, localRole, onModerationMute, onModerationRemove }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string; localRole: ParticipantRole; onModerationMute: () => void; onModerationRemove: () => void }) {
+function MeetingCanvas({ room, connected, fallbackName, localRole, onModerationMute, onModerationRemove, onAssignRole }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string; localRole: ParticipantRole; onModerationMute: () => void; onModerationRemove: () => void; onAssignRole: (identity: string, role: AssignableRole) => Promise<void> }) {
   const mediaParticipants = useRoomMedia(room, connected);
   const { messages, send } = useMeetingChat(room, connected, fallbackName);
   const { raisedIdentities, setRaised } = useRaisedHands(room, connected);
@@ -475,10 +480,19 @@ function MeetingCanvas({ room, connected, fallbackName, localRole, onModerationM
     }
   }
 
-  return <main className="meeting-canvas"><section className="meeting-grid">{tiles.length > 0 ? tiles.map((tile, index) => <ParticipantTile key={tile.key} name={tile.name} participant={tile.participant} track={tile.track} primary={index === 0} />) : <ParticipantTile name={fallbackName} primary />}<div className="invite-tile"><Users /><h3>{connected ? "Weitere Teilnehmer einladen" : "Medien verbinden"}</h3><p>{connected ? "Teilen Sie den Raumcode aus der Kopfleiste." : "Verbinden Sie zuerst den Medienserver über die Schaltfläche unten."}</p></div></section><aside className="meeting-side"><div className="side-tabs"><button className={sideTab === "participants" ? "active" : ""} onClick={() => setSideTab("participants")}>Teilnehmer</button><button className={sideTab === "chat" ? "active" : ""} onClick={() => setSideTab("chat")}><MessageSquare size={15} /> Chat</button></div>{sideTab === "participants" ? <div className="participants-panel">{participants.length > 0 ? participants.map((participant) => <div className="participant-row" key={participant.identity}><div className={`avatar ${participant.isSpeaking ? "speaking" : ""}`}>{participant.name.slice(0, 2).toUpperCase()}</div><div><b>{participant.name}</b><span>{participant.isLocal ? `Sie · ${roleLabel(participant.role)}` : roleLabel(participant.role)}</span></div><div className="participant-status">{participant.handRaised && <Hand className="hand-raised" size={17} />}{participant.microphoneMuted ? <MicOff size={16} /> : <Mic size={16} />}{!participant.isLocal && canModerateRole(localRole, participant.role) && <div className="moderation-actions"><button disabled={participant.microphoneMuted} title="Stummschalten" onClick={() => void moderateParticipant(participant, "mute")}><VolumeX size={15} /></button><button className="remove" title="Aus Raum entfernen" onClick={() => void moderateParticipant(participant, "remove")}><UserMinus size={15} /></button></div>}</div></div>) : <p className="side-empty">Noch nicht verbunden</p>}<button className={`raise-hand ${localHandRaised ? "active" : ""}`} disabled={!connected} onClick={() => void toggleHand()}><Hand /> {localHandRaised ? "Hand senken" : "Hand heben"}</button></div> : <div className="chat-panel"><div className="chat-messages">{messages.length > 0 ? messages.map((message) => <div className={`chat-message ${message.isLocal ? "local" : ""}`} key={message.id}><div><b>{message.senderName}</b><time>{new Date(message.sentAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.text}</p></div>) : <p className="side-empty">Noch keine Nachrichten</p>}</div><form className="chat-form" onSubmit={submitChat}><input value={chatText} onChange={(event) => setChatText(event.target.value)} placeholder="Nachricht schreiben …" maxLength={2000} disabled={!connected} /><button disabled={!connected || !chatText.trim()}><MessageSquare size={16} /> Senden</button></form></div>}{collaborationError && <div className="inline-error">{collaborationError}</div>}</aside></main>;
+  async function changeRole(participant: ParticipantMedia, role: AssignableRole) {
+    try {
+      await onAssignRole(participant.identity, role);
+      setCollaborationError("");
+    } catch (error) {
+      setCollaborationError(messageOf(error));
+    }
+  }
+
+  return <main className="meeting-canvas"><section className="meeting-grid">{tiles.length > 0 ? tiles.map((tile, index) => <ParticipantTile key={tile.key} name={tile.name} participant={tile.participant} track={tile.track} primary={index === 0} />) : <ParticipantTile name={fallbackName} primary />}<div className="invite-tile"><Users /><h3>{connected ? "Weitere Teilnehmer einladen" : "Medien verbinden"}</h3><p>{connected ? "Teilen Sie den Raumcode aus der Kopfleiste." : "Verbinden Sie zuerst den Medienserver über die Schaltfläche unten."}</p></div></section><aside className="meeting-side"><div className="side-tabs"><button className={sideTab === "participants" ? "active" : ""} onClick={() => setSideTab("participants")}>Teilnehmer</button><button className={sideTab === "chat" ? "active" : ""} onClick={() => setSideTab("chat")}><MessageSquare size={15} /> Chat</button></div>{sideTab === "participants" ? <div className="participants-panel">{participants.length > 0 ? participants.map((participant) => <div className="participant-row" key={participant.identity}><div className={`avatar ${participant.isSpeaking ? "speaking" : ""}`}>{participant.name.slice(0, 2).toUpperCase()}</div><div><b>{participant.name}</b>{localRole === "host" && !participant.isLocal && participant.role !== "host" ? <select className="role-select" value={participant.role} onChange={(event) => void changeRole(participant, event.target.value as AssignableRole)}><option value="cohost">Co-Host</option><option value="operator">Operator</option><option value="speaker">Sprecher</option><option value="participant">Teilnehmer</option><option value="viewer">Zuschauer</option></select> : <span>{participant.isLocal ? `Sie · ${roleLabel(participant.role)}` : roleLabel(participant.role)}</span>}</div><div className="participant-status">{participant.handRaised && <Hand className="hand-raised" size={17} />}{participant.microphoneMuted ? <MicOff size={16} /> : <Mic size={16} />}{!participant.isLocal && canModerateRole(localRole, participant.role) && <div className="moderation-actions"><button disabled={participant.microphoneMuted} title="Stummschalten" onClick={() => void moderateParticipant(participant, "mute")}><VolumeX size={15} /></button><button className="remove" title="Aus Raum entfernen" onClick={() => void moderateParticipant(participant, "remove")}><UserMinus size={15} /></button></div>}</div></div>) : <p className="side-empty">Noch nicht verbunden</p>}<button className={`raise-hand ${localHandRaised ? "active" : ""}`} disabled={!connected} onClick={() => void toggleHand()}><Hand /> {localHandRaised ? "Hand senken" : "Hand heben"}</button></div> : <div className="chat-panel"><div className="chat-messages">{messages.length > 0 ? messages.map((message) => <div className={`chat-message ${message.isLocal ? "local" : ""}`} key={message.id}><div><b>{message.senderName}</b><time>{new Date(message.sentAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.text}</p></div>) : <p className="side-empty">Noch keine Nachrichten</p>}</div><form className="chat-form" onSubmit={submitChat}><input value={chatText} onChange={(event) => setChatText(event.target.value)} placeholder="Nachricht schreiben …" maxLength={2000} disabled={!connected} /><button disabled={!connected || !chatText.trim()}><MessageSquare size={16} /> Senden</button></form></div>}{collaborationError && <div className="inline-error">{collaborationError}</div>}</aside></main>;
 }
 
-function BroadcastCanvas({ room, connected, fallbackName, grantedControl }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string; grantedControl: boolean }) {
+function BroadcastCanvas({ room, connected, fallbackName, grantedControl, localRole, onAssignRole }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string; grantedControl: boolean; localRole: ParticipantRole; onAssignRole: (identity: string, role: AssignableRole) => Promise<void> }) {
   const participants = useRoomMedia(room, connected);
   const sources = participants.flatMap((participant) => [
     { id: `${participant.identity}-camera`, name: participant.name, participant, track: participant.cameraTrack },
@@ -504,7 +518,18 @@ function BroadcastCanvas({ room, connected, fallbackName, grantedControl }: { ro
     }
   }
 
-  return <main className="broadcast-canvas"><aside className="source-rail"><div className="rail-heading"><b>Quellen · {sources.length}</b><span className={`master-badge ${canControl ? "active" : ""}`}>{canControl ? "MASTER" : "QUELLE"}</span></div>{sources.length > 0 ? sources.map((source) => <button key={source.id} className={`source ${preview?.id === source.id ? "active" : ""}`} onClick={() => setPreviewId(source.id)}><div className="mini-preview"><ParticipantTile name={source.name} participant={source.participant} track={source.track} /></div><span><b>{source.name}</b><small>{source.participant.isLocal ? "Lokale Quelle" : "Remote-Quelle"} · adaptiv</small></span></button>) : <div className="source-empty"><Video /><span>{connected ? "Warte auf Videoquellen" : "Noch nicht verbunden"}</span></div>}</aside><section className="switcher"><div className="monitors"><div><span className="monitor-label preview">VORSCHAU</span><div className="monitor"><ParticipantTile name={preview?.name || fallbackName} participant={preview?.participant} track={preview?.track} /></div></div><div><span className="monitor-label program">PROGRAMM · SYNCHRON</span><div key={programState?.revision || "empty"} className={`monitor program-frame ${programState?.transition === "fade" ? "fade-in" : ""}`}><ProgramLayout layout={programState?.layout || "single"} sources={programSources} /></div></div></div><div className="transition-row"><span>{canControl ? "Übergang" : "Programmbild wird vom Master gesteuert"}</span><button className={transition === "cut" ? "selected" : ""} disabled={!canControl} onClick={() => setTransition("cut")}>Schnitt</button><button className={transition === "fade" ? "selected" : ""} disabled={!canControl} onClick={() => setTransition("fade")}>Überblende</button><button className="take" disabled={!preview || !canControl} onClick={() => void takePreview()}>TAKE</button></div><div className="scene-strip"><button className={`scene ${layout === "single" ? "selected" : ""}`} disabled={!canControl} onClick={() => setLayout("single")}><span>1</span><b>Einzelbild</b></button><button className={`scene ${layout === "side_by_side" ? "selected" : ""}`} disabled={!canControl} onClick={() => setLayout("side_by_side")}><span>2</span><b>Nebeneinander</b></button><button className={`scene ${layout === "picture_in_picture" ? "selected" : ""}`} disabled={!canControl} onClick={() => setLayout("picture_in_picture")}><span>3</span><b>Bild-in-Bild</b></button><button className="scene add" disabled><Plus /><b>Szene</b></button></div>{switchError && <div className="inline-error">{switchError}</div>}</section><aside className="meter-panel"><span className="eyebrow">AUDIO</span><div className="audio-channel"><b>{programSources[0]?.name || "Programmbus"}</b><div className="meter"><i /><i /><i /><i /><i /></div><input type="range" defaultValue="78" /></div><div className="stream-target"><Radio /><div><b>Programmausgabe</b><span>{programState ? "Mit allen Clients synchronisiert" : "Wartet auf TAKE vom Master"}</span></div></div></aside></main>;
+  async function changeRole(participant: ParticipantMedia, role: AssignableRole) {
+    try {
+      await onAssignRole(participant.identity, role);
+      setSwitchError("");
+    } catch (error) {
+      setSwitchError(messageOf(error));
+    }
+  }
+
+  const remoteParticipants = participants.filter((participant) => !participant.isLocal && participant.role !== "host");
+
+  return <main className="broadcast-canvas"><aside className="source-rail"><div className="rail-heading"><b>Quellen · {sources.length}</b><span className={`master-badge ${canControl ? "active" : ""}`}>{canControl ? "MASTER" : "QUELLE"}</span></div>{localRole === "host" && remoteParticipants.length > 0 && <div className="broadcast-team"><span className="eyebrow">TEAMROLLEN</span>{remoteParticipants.map((participant) => <label key={participant.identity}><b>{participant.name}</b><select className="role-select" value={participant.role} onChange={(event) => void changeRole(participant, event.target.value as AssignableRole)}><option value="cohost">Co-Host</option><option value="operator">Operator</option><option value="speaker">Sprecher</option><option value="participant">Teilnehmer</option><option value="viewer">Zuschauer</option></select></label>)}</div>}{sources.length > 0 ? sources.map((source) => <button key={source.id} className={`source ${preview?.id === source.id ? "active" : ""}`} onClick={() => setPreviewId(source.id)}><div className="mini-preview"><ParticipantTile name={source.name} participant={source.participant} track={source.track} /></div><span><b>{source.name}</b><small>{source.participant.isLocal ? "Lokale Quelle" : "Remote-Quelle"} · adaptiv</small></span></button>) : <div className="source-empty"><Video /><span>{connected ? "Warte auf Videoquellen" : "Noch nicht verbunden"}</span></div>}</aside><section className="switcher"><div className="monitors"><div><span className="monitor-label preview">VORSCHAU</span><div className="monitor"><ParticipantTile name={preview?.name || fallbackName} participant={preview?.participant} track={preview?.track} /></div></div><div><span className="monitor-label program">PROGRAMM · SYNCHRON</span><div key={programState?.revision || "empty"} className={`monitor program-frame ${programState?.transition === "fade" ? "fade-in" : ""}`}><ProgramLayout layout={programState?.layout || "single"} sources={programSources} /></div></div></div><div className="transition-row"><span>{canControl ? "Übergang" : "Programmbild wird vom Master gesteuert"}</span><button className={transition === "cut" ? "selected" : ""} disabled={!canControl} onClick={() => setTransition("cut")}>Schnitt</button><button className={transition === "fade" ? "selected" : ""} disabled={!canControl} onClick={() => setTransition("fade")}>Überblende</button><button className="take" disabled={!preview || !canControl} onClick={() => void takePreview()}>TAKE</button></div><div className="scene-strip"><button className={`scene ${layout === "single" ? "selected" : ""}`} disabled={!canControl} onClick={() => setLayout("single")}><span>1</span><b>Einzelbild</b></button><button className={`scene ${layout === "side_by_side" ? "selected" : ""}`} disabled={!canControl} onClick={() => setLayout("side_by_side")}><span>2</span><b>Nebeneinander</b></button><button className={`scene ${layout === "picture_in_picture" ? "selected" : ""}`} disabled={!canControl} onClick={() => setLayout("picture_in_picture")}><span>3</span><b>Bild-in-Bild</b></button><button className="scene add" disabled><Plus /><b>Szene</b></button></div>{switchError && <div className="inline-error">{switchError}</div>}</section><aside className="meter-panel"><span className="eyebrow">AUDIO</span><div className="audio-channel"><b>{programSources[0]?.name || "Programmbus"}</b><div className="meter"><i /><i /><i /><i /><i /></div><input type="range" defaultValue="78" /></div><div className="stream-target"><Radio /><div><b>Programmausgabe</b><span>{programState ? "Mit allen Clients synchronisiert" : "Wartet auf TAKE vom Master"}</span></div></div></aside></main>;
 }
 
 function ProgramLayout({ layout, sources }: { layout: BroadcastLayout; sources: Array<{ id: string; name: string; participant: ParticipantMedia; track?: VideoMediaTrack }> }) {

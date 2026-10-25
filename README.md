@@ -11,6 +11,8 @@ Vor dem Beitritt steht ein Vorraum mit Kameravorschau, Anzeigename sowie Auswahl
 
 In Meetings sehen alle Teilnehmer ihre Rollen. Host, Co-Host und Operator können untergeordnete Rollen stummschalten oder aus dem Raum entfernen; Host und gleichrangige Moderatoren sind vor unzulässigen Eingriffen geschützt.
 
+Der Host kann verbundene Teilnehmer im Meeting und in der Live-Regie zu Co-Host, Operator, Sprecher, Teilnehmer oder Zuschauer ernennen. Die Änderung wird im Backend gespeichert; der betroffene Client trennt sich automatisch und erhält beim erneuten Beitritt ein LiveKit-Token mit den neuen Rechten. Zuschauer können weder Kamera, Mikrofon noch Bildschirm veröffentlichen.
+
 Beim Beitritt des Hosts wechselt eine geplante Veranstaltung auf „Live“. Der Host kann sie anschließend verbindlich für alle beenden; verbundene Clients verlassen den Raum automatisch und ein erneuter Beitritt wird serverseitig verhindert.
 
 ## Projektstruktur
@@ -72,6 +74,7 @@ Die produktive Einrichtung mit öffentlicher Domain, TLS und TURN ist unter [`in
 
 - Räume sind standardmäßig privat.
 - Direkter Entity-Zugriff ist per Row-Level Security auf Eigentümer bzw. den jeweiligen Benutzer beschränkt.
+- Mitgliedschaften können nur über geprüfte Backend-Funktionen erstellt oder verändert werden; eine Selbst-Hochstufung über den direkten Entity-Zugriff ist gesperrt.
 - Teilnehmer treten über die Backend-Funktion `join-room` bei.
-- `get-room` und `create-livekit-token` prüfen die Mitgliedschaft serverseitig.
+- `get-room`, `create-livekit-token` und `manage-room-member` prüfen Mitgliedschaft und Host-Rechte serverseitig.
 - LiveKit-Tokens laufen nach zehn Minuten ab; bestehende Verbindungen bleiben davon unberührt.

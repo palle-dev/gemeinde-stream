@@ -29,6 +29,7 @@ export interface MembershipRecord {
   event_mode: RoomMode;
   user_email: string;
   display_name: string;
+  participant_identity?: string;
   role: "host" | "cohost" | "operator" | "speaker" | "participant" | "viewer";
 }
 

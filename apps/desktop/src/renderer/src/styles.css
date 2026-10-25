@@ -160,6 +160,7 @@ input::placeholder { color: #5e6977; }
 .avatar.speaking { box-shadow: 0 0 0 2px var(--lime); }
 .participant-row b, .participant-row span { display: block; }
 .participant-row span { color: var(--muted); font-size: 12px; }
+.role-select { display: block; width: 100%; min-width: 112px; margin-top: 4px; padding: 4px 24px 4px 7px; border: 1px solid var(--line); border-radius: 6px; background: #171e27; color: #cbd5df; font-size: 11px; }
 .participant-status { display: flex; align-items: center; gap: 7px; }
 .moderation-actions { display: flex; gap: 5px; padding-left: 3px; margin-left: 2px; border-left: 1px solid var(--line); }
 .moderation-actions button { width: 27px; height: 27px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 7px; background: #1b232d; color: #b7c0cb; }
@@ -188,12 +189,16 @@ input::placeholder { color: #5e6977; }
 .tile-hand { position: absolute; z-index: 2; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; padding: 7px 9px; border-radius: 8px; color: #1a1304; background: #ffd166; font-size: 11px; font-weight: 800; }
 .broadcast-canvas { min-height: 0; display: grid; grid-template-columns: 275px 1fr 225px; background: #070a0e; }
 .source-rail, .meter-panel { min-height: 0; background: #10151c; padding: 16px; }
-.source-rail { border-right: 1px solid var(--line); }
+.source-rail { border-right: 1px solid var(--line); overflow-y: auto; }
 .meter-panel { border-left: 1px solid var(--line); }
 .rail-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .rail-heading button { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: #1b232d; }
 .master-badge { padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; }
 .master-badge.active { color: var(--lime); border-color: #b8ff3d66; background: #b8ff3d0d; }
+.broadcast-team { display: grid; gap: 8px; margin-bottom: 14px; padding: 11px; border: 1px solid var(--line); border-radius: 9px; background: #0c1117; }
+.broadcast-team label { display: grid; grid-template-columns: minmax(0, 1fr) 112px; align-items: center; gap: 8px; }
+.broadcast-team label b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.broadcast-team .role-select { margin-top: 0; }
 .source { width: 100%; display: grid; grid-template-columns: 95px 1fr; align-items: center; gap: 10px; padding: 8px; margin-bottom: 8px; border: 1px solid transparent; background: transparent; border-radius: 10px; text-align: left; }
 .source.active { border-color: var(--cyan); background: #35d5cc0b; }
 .source b, .source small { display: block; }

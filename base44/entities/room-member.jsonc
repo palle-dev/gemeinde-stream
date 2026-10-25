@@ -7,6 +7,7 @@
     "event_mode": { "type": "string", "enum": ["meeting", "broadcast"] },
     "user_email": { "type": "string", "format": "email" },
     "display_name": { "type": "string" },
+    "participant_identity": { "type": "string", "description": "LiveKit identity of the connected user" },
     "role": { "type": "string", "enum": ["host", "cohost", "operator", "speaker", "participant", "viewer"], "default": "participant" },
     "status": { "type": "string", "enum": ["invited", "joined", "left", "blocked"], "default": "joined" },
     "can_publish_audio": { "type": "boolean", "default": true },
@@ -17,9 +18,9 @@
   },
   "required": ["event_id", "event_title", "event_mode", "user_email", "display_name", "role"],
   "rls": {
-    "create": { "data.user_email": "{{user.email}}" },
+    "create": { "user_condition": { "role": "admin" } },
     "read": { "$or": [{ "data.user_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
-    "update": { "$or": [{ "data.user_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
-    "delete": { "$or": [{ "data.user_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] }
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
   }
 }
