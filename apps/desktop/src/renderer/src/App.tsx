@@ -24,7 +24,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { base44 } from "./lib/base44";
-import { MediaRoom, type ConnectionState } from "./lib/room";
+import { MediaRoom, type ConnectionState, type MediaPreferences } from "./lib/room";
 import {
   RoomAudio,
   VideoTrackElement,
@@ -33,6 +33,7 @@ import {
   type VideoMediaTrack,
 } from "./components/RoomMedia";
 import { setHandRaised, useMeetingChat } from "./components/MeetingCollaboration";
+import { PreJoin } from "./components/PreJoin";
 import {
   useBroadcastCoordination,
   type BroadcastLayout,
@@ -310,20 +311,28 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [canControlProgram, setCanControlProgram] = useState(false);
+  const [joined, setJoined] = useState(false);
   const media = useMemo(() => new MediaRoom(setConnection), []);
 
   useEffect(() => {
     return () => { void media.disconnect(); };
   }, [media]);
 
-  async function connect() {
+  async function connect(preferences: MediaPreferences) {
     setMediaMessage("Zugang wird angefordert …");
     try {
-      const credentials = unwrap(await base44.functions.invoke("create-livekit-token", { eventId: event.id }) as FunctionEnvelope<{ serverUrl: string; participantToken: string; role: string; canControlProgram: boolean }>);
+      const credentials = unwrap(await base44.functions.invoke("create-livekit-token", { eventId: event.id, displayName: preferences.displayName }) as FunctionEnvelope<{ serverUrl: string; participantToken: string; role: string; canControlProgram: boolean }>);
       await media.connect(credentials.serverUrl, credentials.participantToken);
       setCanControlProgram(credentials.canControlProgram);
+      await media.applyDevices(preferences);
+      if (preferences.microphoneEnabled) await media.setMicrophone(true);
+      if (preferences.cameraEnabled) await media.setCamera(true);
+      setMic(preferences.microphoneEnabled);
+      setCamera(preferences.cameraEnabled);
+      setJoined(true);
       setMediaMessage("Sicher mit dem Medienserver verbunden");
     } catch (error) {
+      await media.disconnect();
       setConnection("error");
       setMediaMessage(messageOf(error));
     }
@@ -365,7 +374,9 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
   }
 
   const connected = connection === "connected";
-  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} /> : <BroadcastCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} grantedControl={canControlProgram} />}<footer className="control-bar"><div className="control-group"><button disabled={!connected} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={!connected} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={!connected} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button></div><button className="connect-button" onClick={() => void connect()} disabled={connection === "connecting" || connected}>{connected ? "Verbunden" : connection === "connecting" ? "Verbinde …" : "Medien verbinden"}</button><button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></footer></div>;
+  if (!joined) return <PreJoin title={event.title} mode={event.mode} initialName={user.full_name || user.email} defaultCameraOn={event.default_camera_on} defaultMicrophoneOn={event.default_microphone_on} busy={connection === "connecting"} error={connection === "error" ? mediaMessage : ""} onCancel={onLeave} onJoin={connect} />;
+
+  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} /> : <BroadcastCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} grantedControl={canControlProgram} />}<footer className="control-bar"><div className="control-group"><button disabled={!connected} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={!connected} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={!connected} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button></div><button className="connect-button" disabled>{connected ? "Verbunden" : "Verbindung getrennt"}</button><button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></footer></div>;
 }
 
 function MeetingCanvas({ room, connected, fallbackName }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string }) {

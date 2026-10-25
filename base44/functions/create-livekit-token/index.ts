@@ -7,7 +7,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-    const { eventId } = await req.json();
+    const { eventId, displayName } = await req.json();
     const event = await base44.asServiceRole.entities.Event.get(String(eventId ?? ""));
     if (!event) return Response.json({ error: "Raum nicht gefunden" }, { status: 404 });
 
@@ -30,9 +30,10 @@ Deno.serve(async (req) => {
 
     const role = isHost ? "host" : (member?.role ?? "participant");
     const canPublish = role !== "viewer";
+    const requestedName = String(displayName ?? "").trim().slice(0, 80);
     const token = new AccessToken(apiKey, apiSecret, {
       identity: user.id,
-      name: member?.display_name ?? user.full_name ?? user.email,
+      name: requestedName || member?.display_name || user.full_name || user.email,
       metadata: JSON.stringify({ eventId: event.id, role, mode: event.mode }),
       ttl: "10m",
     });

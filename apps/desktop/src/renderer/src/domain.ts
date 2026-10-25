@@ -17,6 +17,8 @@ export interface EventRecord {
   host_email: string;
   join_code: string;
   livekit_room_name: string;
+  default_camera_on?: boolean;
+  default_microphone_on?: boolean;
   created_date?: string;
 }
 
