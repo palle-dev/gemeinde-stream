@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { base44 } from "../lib/base44";
 import type { BroadcastLayout } from "./BroadcastCoordination";
 
-export type SceneTrackSource = "camera" | "screen";
+export type SceneTrackSource = "camera" | "screen" | "media";
 
 export interface SceneSourceSlot {
   slot: number;

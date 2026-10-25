@@ -5,6 +5,9 @@ interface Window {
     platform: string;
     version: string;
     onOpenJoinLink(callback: (joinCode: string) => void): () => void;
+    listMedia(): Promise<Array<{ id: string; name: string; type: "image" | "video" | "audio"; url: string }>>;
+    pickMedia(): Promise<Array<{ id: string; name: string; type: "image" | "video" | "audio"; url: string }>>;
+    removeMedia(assetId: string): Promise<void>;
     beginRecording(suggestedName: string): Promise<boolean>;
     appendRecording(chunk: ArrayBuffer): Promise<void>;
     finishRecording(): Promise<void>;

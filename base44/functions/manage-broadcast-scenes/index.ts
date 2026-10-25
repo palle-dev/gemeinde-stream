@@ -1,7 +1,7 @@
 import { createClientFromRequest } from "npm:@base44/sdk";
 
 const layouts = ["single", "side_by_side", "picture_in_picture"];
-const trackSources = ["camera", "screen"];
+const trackSources = ["camera", "screen", "media"];
 
 Deno.serve(async (req) => {
   try {

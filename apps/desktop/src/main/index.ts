@@ -1,9 +1,13 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from "electron";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { open, unlink, type FileHandle } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import ffmpegStaticPath from "ffmpeg-static";
 import { joinCodeFromArguments, joinCodeFromDeepLink } from "./deepLinks";
+import { createStoredMediaAsset, loadMediaLibrary, publicMediaAsset, saveMediaLibrary, type StoredMediaAsset } from "./mediaLibrary";
+
+protocol.registerSchemesAsPrivileged([{ scheme: "gemeinde-media", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
 
 interface RecordingFile {
   handle: FileHandle;
@@ -22,6 +26,13 @@ interface ActiveStream {
 const activeStreams = new Map<number, ActiveStream>();
 let mainWindow: BrowserWindow | null = null;
 let pendingJoinCode = joinCodeFromArguments(process.argv);
+let mediaAssets: StoredMediaAsset[] = [];
+
+function mediaLibraryPath(): string { return join(app.getPath("userData"), "media-library.json"); }
+
+async function persistMediaLibrary(): Promise<void> {
+  await saveMediaLibrary(mediaLibraryPath(), mediaAssets);
+}
 
 function deliverJoinCode(code: string | null): void {
   if (!code) return;
@@ -42,6 +53,38 @@ function registerProtocol(): void {
 
 ipcMain.on("app:version", (event) => {
   event.returnValue = app.getVersion();
+});
+
+ipcMain.handle("media:list", () => mediaAssets.map(publicMediaAsset));
+
+ipcMain.handle("media:pick", async (event) => {
+  const owner = BrowserWindow.fromWebContents(event.sender);
+  const options = {
+    title: "Medien zur Produktion hinzufügen",
+    properties: ["openFile", "multiSelections"] as Array<"openFile" | "multiSelections">,
+    filters: [
+      { name: "Bilder, Videos und Audio", extensions: ["jpg", "jpeg", "png", "webp", "gif", "bmp", "mp4", "webm", "mov", "mkv", "m4v", "mp3", "wav", "m4a", "aac", "ogg", "flac"] },
+    ],
+  };
+  const result = owner ? await dialog.showOpenDialog(owner, options) : await dialog.showOpenDialog(options);
+  if (result.canceled) return [];
+  const existingPaths = new Set(mediaAssets.map((asset) => asset.path.toLowerCase()));
+  const added = result.filePaths.flatMap((path) => {
+    if (existingPaths.has(path.toLowerCase())) return [];
+    const asset = createStoredMediaAsset(path, basename(path));
+    if (!asset) return [];
+    existingPaths.add(path.toLowerCase());
+    mediaAssets.push(asset);
+    return [asset];
+  });
+  if (added.length > 0) await persistMediaLibrary();
+  return added.map(publicMediaAsset);
+});
+
+ipcMain.handle("media:remove", async (_event, assetId: string) => {
+  const before = mediaAssets.length;
+  mediaAssets = mediaAssets.filter((asset) => asset.id !== assetId);
+  if (mediaAssets.length !== before) await persistMediaLibrary();
 });
 
 export function resolveFfmpegPath(configuredPath = process.env.GEMEINDE_STREAM_FFMPEG, packaged = app.isPackaged): string {
@@ -243,8 +286,15 @@ if (!hasSingleInstanceLock) {
     deliverJoinCode(joinCodeFromDeepLink(url));
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     registerProtocol();
+    mediaAssets = await loadMediaLibrary(mediaLibraryPath());
+    await protocol.handle("gemeinde-media", (request) => {
+      const id = new URL(request.url).hostname;
+      const asset = mediaAssets.find((candidate) => candidate.id === id);
+      if (!asset) return new Response("Medium nicht gefunden", { status: 404 });
+      return net.fetch(pathToFileURL(asset.path).toString(), { headers: request.headers });
+    });
     createWindow();
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();

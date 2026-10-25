@@ -2,8 +2,9 @@ import { Room, Track } from "livekit-client";
 import { PROGRAM_FRAME_RATE, PROGRAM_HEIGHT, PROGRAM_WIDTH } from "../lib/room";
 import type { BroadcastProgramState } from "./BroadcastCoordination";
 import type { VideoMediaTrack } from "./RoomMedia";
+import type { LocalMediaAsset } from "./MediaLibrary";
 
-export interface ProgramMediaSource { id: string; name: string; track?: VideoMediaTrack; }
+export interface ProgramMediaSource { id: string; name: string; track?: VideoMediaTrack; media?: LocalMediaAsset; }
 export interface ProgramMediaSnapshot { programState: BroadcastProgramState | null; sources: ProgramMediaSource[]; audioMix: Record<string, number>; }
 export interface ProgramMediaSession { stream: MediaStream; cleanup(): void; }
 export interface CoverCrop { sx: number; sy: number; sw: number; sh: number; }
@@ -31,6 +32,7 @@ export async function createProgramMediaSession(room: Room, snapshot: () => Prog
   const context = canvas.getContext("2d", { alpha: false });
   if (!context) throw new Error("Die 1080p-Zeichenfläche konnte nicht erstellt werden.");
   const attachedVideos = new Map<string, { track: VideoMediaTrack; element: HTMLVideoElement }>();
+  const localMedia = new Map<string, HTMLImageElement | HTMLVideoElement | HTMLAudioElement>();
   const ensureVideo = (source: ProgramMediaSource) => {
     if (!source.track) return undefined;
     const existing = attachedVideos.get(source.id);
@@ -42,9 +44,34 @@ export async function createProgramMediaSession(room: Room, snapshot: () => Prog
     attachedVideos.set(source.id, { track: source.track, element });
     return element;
   };
+  const ensureLocalMedia = (source: ProgramMediaSource) => {
+    if (!source.media) return undefined;
+    const existing = localMedia.get(source.id);
+    if (existing) return existing;
+    if (source.media.type === "image") {
+      const element = new Image(); element.src = source.media.url; localMedia.set(source.id, element); return element;
+    }
+    const element = document.createElement(source.media.type === "video" ? "video" : "audio");
+    element.src = source.media.url; element.loop = true; element.autoplay = true; element.preload = "auto";
+    if (element instanceof HTMLVideoElement) element.playsInline = true;
+    void element.play().catch(() => undefined);
+    localMedia.set(source.id, element);
+    return element;
+  };
   const drawSlot = (source: ProgramMediaSource | undefined, x: number, y: number, width: number, height: number) => {
     context.fillStyle = "#080b10"; context.fillRect(x, y, width, height);
     if (!source) return;
+    const local = ensureLocalMedia(source);
+    if (local instanceof HTMLImageElement && local.complete && local.naturalWidth > 0) {
+      const crop = coverCrop(local.naturalWidth, local.naturalHeight, width, height);
+      context.drawImage(local, crop.sx, crop.sy, crop.sw, crop.sh, x, y, width, height);
+      return;
+    }
+    if (local instanceof HTMLVideoElement && local.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && local.videoWidth > 0) {
+      const crop = coverCrop(local.videoWidth, local.videoHeight, width, height);
+      context.drawImage(local, crop.sx, crop.sy, crop.sw, crop.sh, x, y, width, height);
+      return;
+    }
     const video = ensureVideo(source);
     if (video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
       const crop = coverCrop(video.videoWidth, video.videoHeight, width, height);
@@ -106,6 +133,7 @@ export async function createProgramMediaSession(room: Room, snapshot: () => Prog
   await audioContext.resume();
   const audioDestination = audioContext.createMediaStreamDestination();
   const audioNodes = new Map<string, { track: MediaStreamTrack; source: MediaStreamAudioSourceNode; gain: GainNode }>();
+  const mediaAudioNodes = new Map<string, { element: HTMLMediaElement; source: MediaElementAudioSourceNode; gain: GainNode }>();
   const syncAudioTracks = () => {
     const current = snapshot();
     const activeIdentities = new Set<string>();
@@ -125,6 +153,21 @@ export async function createProgramMediaSession(room: Room, snapshot: () => Prog
       if (activeIdentities.has(identity)) continue;
       node.source.disconnect(); node.gain.disconnect(); audioNodes.delete(identity);
     }
+    const activeMediaIds = new Set(current.programState?.sourceIds ?? []);
+    for (const source of current.sources) {
+      if (!source.media || source.media.type === "image") continue;
+      const element = ensureLocalMedia(source);
+      if (!(element instanceof HTMLMediaElement)) continue;
+      let node = mediaAudioNodes.get(source.id);
+      if (!node) {
+        const mediaSource = audioContext.createMediaElementSource(element);
+        const gain = audioContext.createGain();
+        mediaSource.connect(gain).connect(audioDestination);
+        node = { element, source: mediaSource, gain }; mediaAudioNodes.set(source.id, node);
+      }
+      node.gain.gain.value = activeMediaIds.has(source.id) ? 1 : 0;
+      if (activeMediaIds.has(source.id)) void element.play().catch(() => undefined); else element.pause();
+    }
   };
   syncAudioTracks();
   const syncInterval = window.setInterval(syncAudioTracks, 250);
@@ -135,6 +178,7 @@ export async function createProgramMediaSession(room: Room, snapshot: () => Prog
     window.cancelAnimationFrame(frame); window.clearInterval(syncInterval);
     for (const attached of attachedVideos.values()) attached.track.detach(attached.element);
     audioNodes.forEach((node) => { node.source.disconnect(); node.gain.disconnect(); });
+    mediaAudioNodes.forEach((node) => { node.element.pause(); node.source.disconnect(); node.gain.disconnect(); });
     stream.getTracks().forEach((track) => track.stop()); void audioContext.close();
   } };
 }

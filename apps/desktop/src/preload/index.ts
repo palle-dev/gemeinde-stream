@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld("desktop", {
     ipcRenderer.on("app:join-link", listener);
     return () => ipcRenderer.removeListener("app:join-link", listener);
   },
+  listMedia: () => ipcRenderer.invoke("media:list") as Promise<Array<{ id: string; name: string; type: "image" | "video" | "audio"; url: string }>>,
+  pickMedia: () => ipcRenderer.invoke("media:pick") as Promise<Array<{ id: string; name: string; type: "image" | "video" | "audio"; url: string }>>,
+  removeMedia: (assetId: string) => ipcRenderer.invoke("media:remove", assetId) as Promise<void>,
   beginRecording: (suggestedName: string) => ipcRenderer.invoke("recording:begin", suggestedName) as Promise<boolean>,
   appendRecording: (chunk: ArrayBuffer) => ipcRenderer.invoke("recording:append", chunk) as Promise<void>,
   finishRecording: () => ipcRenderer.invoke("recording:finish") as Promise<void>,
