@@ -4,6 +4,7 @@ interface Window {
   desktop: {
     platform: string;
     version: string;
+    onOpenJoinLink(callback: (joinCode: string) => void): () => void;
     beginRecording(suggestedName: string): Promise<boolean>;
     appendRecording(chunk: ArrayBuffer): Promise<void>;
     finishRecording(): Promise<void>;

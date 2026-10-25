@@ -36,6 +36,12 @@
   "build": {
     "appId": "de.gemeinde.stream",
     "productName": "Gemeinde Stream",
+    "protocols": [
+      {
+        "name": "Gemeinde Stream Einladung",
+        "schemes": ["gemeinde-stream"]
+      }
+    ],
     "directories": {
       "output": "release"
     },

@@ -3,6 +3,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { open, unlink, type FileHandle } from "node:fs/promises";
 import { join } from "node:path";
 import ffmpegStaticPath from "ffmpeg-static";
+import { joinCodeFromArguments, joinCodeFromDeepLink } from "./deepLinks";
 
 interface RecordingFile {
   handle: FileHandle;
@@ -19,6 +20,29 @@ interface ActiveStream {
 }
 
 const activeStreams = new Map<number, ActiveStream>();
+let mainWindow: BrowserWindow | null = null;
+let pendingJoinCode = joinCodeFromArguments(process.argv);
+
+function deliverJoinCode(code: string | null): void {
+  if (!code) return;
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.send("app:join-link", code);
+  } else {
+    pendingJoinCode = code;
+  }
+}
+
+function registerProtocol(): void {
+  if (process.defaultApp && process.argv[1]) {
+    app.setAsDefaultProtocolClient("gemeinde-stream", process.execPath, [process.argv[1]]);
+  } else {
+    app.setAsDefaultProtocolClient("gemeinde-stream");
+  }
+}
+
+ipcMain.on("app:version", (event) => {
+  event.returnValue = app.getVersion();
+});
 
 export function resolveFfmpegPath(configuredPath = process.env.GEMEINDE_STREAM_FFMPEG, packaged = app.isPackaged): string {
   if (configuredPath?.trim()) return configuredPath.trim();
@@ -158,6 +182,14 @@ function createWindow(): void {
       sandbox: true,
     },
   });
+  mainWindow = window;
+
+  window.webContents.once("did-finish-load", () => {
+    if (pendingJoinCode) {
+      window.webContents.send("app:join-link", pendingJoinCode);
+      pendingJoinCode = null;
+    }
+  });
 
   const senderId = window.webContents.id;
   window.webContents.once("destroyed", () => { void discardRecording(senderId); void stopStream(senderId, true); });
@@ -194,12 +226,31 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
-  createWindow();
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (_event, argv) => {
+    deliverJoinCode(joinCodeFromArguments(argv));
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
   });
-});
+
+  app.on("open-url", (event, url) => {
+    event.preventDefault();
+    deliverJoinCode(joinCodeFromDeepLink(url));
+  });
+
+  app.whenReady().then(() => {
+    registerProtocol();
+    createWindow();
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

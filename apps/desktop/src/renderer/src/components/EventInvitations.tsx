@@ -18,7 +18,11 @@ function messageOf(error: unknown): string {
 
 export function invitationText(event: EventRecord): string {
   const start = event.starts_at ? new Date(event.starts_at).toLocaleString("de-DE", { dateStyle: "full", timeStyle: "short" }) : "Termin nach Absprache";
-  return [`Einladung: ${event.title}`, event.description || "", `Termin: ${start}`, `Raumcode: ${event.join_code}`, "Gemeinde Stream öffnen und den Raumcode eingeben."].filter(Boolean).join("\n");
+  return [`Einladung: ${event.title}`, event.description || "", `Termin: ${start}`, `Raumcode: ${event.join_code}`, `Direkt beitreten: ${invitationLink(event)}`].filter(Boolean).join("\n");
+}
+
+export function invitationLink(event: EventRecord): string {
+  return `gemeinde-stream://join/${encodeURIComponent(event.join_code)}`;
 }
 
 export function EventInvitations({ event, onClose }: { event: EventRecord; onClose: () => void }) {

@@ -6,6 +6,36 @@ export const PROGRAM_FRAME_RATE = 60;
 
 export type ConnectionState = "idle" | "connecting" | "connected" | "disconnected" | "error";
 
+export type MediaServerScope = "local" | "private" | "public-secure" | "public-insecure" | "invalid";
+
+export function mediaServerScope(serverUrl: string): MediaServerScope {
+  try {
+    const parsed = new URL(serverUrl);
+    const host = parsed.hostname.toLowerCase();
+    if (host === "localhost" || host === "127.0.0.1" || host === "::1") return "local";
+    if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) return "private";
+    return parsed.protocol === "wss:" || parsed.protocol === "https:" ? "public-secure" : "public-insecure";
+  } catch {
+    return "invalid";
+  }
+}
+
+export function mediaConnectionMessage(error: unknown, serverUrl: string): string {
+  const detail = error instanceof Error ? error.message : "Die Verbindung ist fehlgeschlagen.";
+  switch (mediaServerScope(serverUrl)) {
+    case "local":
+      return `Der lokale Medienserver ist nicht erreichbar. Prüfen Sie, ob LiveKit auf diesem PC läuft. (${detail})`;
+    case "private":
+      return `Der Medienserver im lokalen Netzwerk ist nicht erreichbar. Prüfen Sie Netzwerk und Firewall. (${detail})`;
+    case "public-insecure":
+      return "Der öffentliche Medienserver verwendet keine verschlüsselte WSS-Verbindung. Bitte TLS konfigurieren.";
+    case "invalid":
+      return "Die konfigurierte Medienserver-Adresse ist ungültig.";
+    default:
+      return detail;
+  }
+}
+
 export interface MediaPreferences {
   displayName: string;
   microphoneEnabled: boolean;

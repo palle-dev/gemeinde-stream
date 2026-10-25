@@ -8,5 +8,6 @@ declare module "@base44/sdk" {
     "manage-room-member": true;
     "manage-broadcast-scenes": true;
     "manage-event": true;
+    "manage-rundown": true;
   }
 }

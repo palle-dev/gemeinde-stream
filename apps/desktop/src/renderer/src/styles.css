@@ -298,6 +298,27 @@ input::placeholder { color: #5e6977; }
 .source-rail, .meter-panel { min-height: 0; background: #10151c; padding: 16px; }
 .source-rail { border-right: 1px solid var(--line); overflow-y: auto; }
 .meter-panel { border-left: 1px solid var(--line); overflow-y: auto; }
+.rundown-panel { margin: 12px 0 18px; border: 1px solid var(--line); border-radius: 10px; background: #0b1016; overflow: hidden; }
+.rundown-heading { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 11px; border: 0; background: #141b23; color: white; text-align: left; }
+.rundown-heading span:first-child { display: grid; gap: 2px; }
+.rundown-heading small, .rundown-item small { color: var(--muted); font-size: 10px; }
+.rundown-list { display: grid; max-height: 260px; overflow-y: auto; }
+.rundown-item { min-width: 0; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 7px; padding: 8px; border-top: 1px solid #202833; }
+.rundown-item > div:nth-child(2) { min-width: 0; display: grid; gap: 2px; }
+.rundown-item > div:nth-child(2) b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.rundown-item.live { background: #ff4f5b17; box-shadow: inset 3px 0 #ff5964; }
+.rundown-item.done { opacity: .6; }
+.rundown-state, .rundown-actions button, .rundown-add button { width: 27px; height: 27px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 7px; background: #19212b; color: var(--muted); }
+.rundown-state svg, .rundown-actions svg, .rundown-add svg { width: 13px; }
+.rundown-item.live .rundown-state { color: #ff747c; border-color: #ff596466; }
+.rundown-item.done .rundown-state { color: var(--lime); }
+.rundown-actions { display: flex; gap: 2px; opacity: 0; transition: opacity .15s; }
+.rundown-item:hover .rundown-actions { opacity: 1; }
+.rundown-actions button:last-child { color: #ff8589; }
+.rundown-empty { margin: 0; padding: 14px 8px; color: var(--muted); font-size: 11px; text-align: center; }
+.rundown-add { display: grid; gap: 5px; padding: 8px; border-top: 1px solid var(--line); }
+.rundown-add > div { display: grid; grid-template-columns: 1fr 52px 27px; gap: 5px; }
+.rundown-add input, .rundown-add select { min-width: 0; height: 30px; padding: 0 7px; font-size: 10px; }
 .rail-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .rail-heading button { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: #1b232d; }
 .master-badge { padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; }

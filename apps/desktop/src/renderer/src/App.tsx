@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RoomEvent, Track } from "livekit-client";
+import desktopPackage from "../../../package.json";
 import {
   ArrowLeft,
   CalendarDays,
@@ -31,7 +32,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { base44 } from "./lib/base44";
-import { MediaRoom, type ConnectionState, type MediaPreferences } from "./lib/room";
+import { MediaRoom, mediaConnectionMessage, mediaServerScope, type ConnectionState, type MediaPreferences } from "./lib/room";
 import {
   RoomAudio,
   VideoTrackElement,
@@ -62,6 +63,7 @@ import { BroadcastAudioMixer } from "./components/BroadcastAudioMixer";
 import { ProgramRecorder } from "./components/ProgramRecorder";
 import { ProgramStreamer } from "./components/ProgramStreamer";
 import { SourceQualityLine, SourceQualityMonitor, useSourceQuality } from "./components/SourceQualityMonitor";
+import { RundownPanel } from "./components/RundownPanel";
 import {
   normalizeBroadcastOverlay,
   useBroadcastCoordination,
@@ -96,6 +98,7 @@ export default function App() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [activeEvent, setActiveEvent] = useState<EventRecord | null>(null);
+  const [pendingJoinCode, setPendingJoinCode] = useState(() => new URLSearchParams(window.location.search).get("join")?.toUpperCase() || "");
 
   useEffect(() => {
     base44.auth.isAuthenticated()
@@ -104,6 +107,8 @@ export default function App() {
       .catch(() => setUser(null))
       .finally(() => setCheckingAuth(false));
   }, []);
+
+  useEffect(() => window.desktop?.onOpenJoinLink(setPendingJoinCode), []);
 
   if (checkingAuth) {
     return <div className="splash"><div className="brand-mark"><Radio /></div><span>Gemeinde Stream wird vorbereitet …</span></div>;
@@ -116,6 +121,8 @@ export default function App() {
     <Dashboard
       user={user}
       onOpen={setActiveEvent}
+      initialJoinCode={pendingJoinCode}
+      onJoinCodeConsumed={() => setPendingJoinCode("")}
       onLogout={() => {
         setUser(null);
         base44.auth.logout();
@@ -189,13 +196,13 @@ function Login({ onAuthenticated }: { onAuthenticated: (user: UserInfo) => void 
             {view === "login" ? <><UserPlus /> Noch kein Konto? Registrieren</> : "Zurück zur Anmeldung"}
           </button>
         </form>
-        <small className="version">Version {window.desktop?.version ?? "0.1.0"}</small>
+        <small className="version">Version {window.desktop?.version ?? desktopPackage.version}</small>
       </section>
     </main>
   );
 }
 
-function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event: EventRecord) => void; onLogout: () => void }) {
+function Dashboard({ user, onOpen, onLogout, initialJoinCode, onJoinCodeConsumed }: { user: UserInfo; onOpen: (event: EventRecord) => void; onLogout: () => void; initialJoinCode?: string; onJoinCodeConsumed: () => void }) {
   const [owned, setOwned] = useState<EventRecord[]>([]);
   const [memberships, setMemberships] = useState<MembershipRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,20 +230,31 @@ function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event:
 
   useEffect(() => { void reload(); }, []);
 
-  async function joinRoom(event: React.FormEvent) {
-    event.preventDefault();
+  async function joinByCode(code: string) {
     setNotice("");
     try {
       const result = unwrap(await base44.functions.invoke("join-room", {
-        joinCode: joinCode.trim().toUpperCase(),
+        joinCode: code.trim().toUpperCase(),
         displayName: user.full_name || user.email,
       }) as FunctionEnvelope<{ eventId: string }>);
       const room = unwrap(await base44.functions.invoke("get-room", { eventId: result.eventId }) as FunctionEnvelope<{ event: EventRecord }>);
+      onJoinCodeConsumed();
       onOpen(room.event);
     } catch (error) {
       setNotice(messageOf(error));
     }
   }
+
+  async function joinRoom(event: React.FormEvent) {
+    event.preventDefault();
+    await joinByCode(joinCode);
+  }
+
+  useEffect(() => {
+    if (!initialJoinCode) return;
+    setJoinCode(initialJoinCode);
+    void joinByCode(initialJoinCode);
+  }, [initialJoinCode]);
 
   async function openMembership(member: MembershipRecord) {
     try {
@@ -279,7 +297,7 @@ function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event:
         {notice && <div className="error-banner">{notice}</div>}
         <section className="quick-actions">
           <form className="join-card" onSubmit={joinRoom}><div className="icon-box"><Users /></div><div><b>Einem Raum beitreten</b><span>Meeting- oder Produktionscode eingeben</span></div><input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="RAUMCODE" maxLength={12} required /><button className="secondary">Beitreten</button></form>
-          <div className="health-card"><div className="health-top"><span><Wifi /> Systemstatus</span><b>Backend bereit</b></div><div className="health-meter ready"><span /></div><small>Base44 und der lokale LiveKit-Medienserver sind konfiguriert.</small></div>
+          <div className="health-card"><div className="health-top"><span><Wifi /> Systemstatus</span><b>Backend verbunden</b></div><div className="health-meter ready"><span /></div><small>Base44 ist erreichbar. Medienserver und Geräte werden beim Beitritt geprüft.</small></div>
         </section>
         <section className="section-heading"><h2>Geplant und zuletzt verwendet</h2><span>{owned.length + memberships.filter((member) => !owned.some((event) => event.id === member.event_id)).length} Räume</span></section>
         <div className="room-grid">
@@ -398,6 +416,7 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
 
   async function connect(preferences: MediaPreferences) {
     setMediaMessage("Zugang wird angefordert …");
+    let serverUrl = "";
     try {
       const credentials = unwrap(await base44.functions.invoke("create-livekit-token", { eventId: event.id, displayName: preferences.displayName }) as FunctionEnvelope<{ waitingForApproval?: boolean; serverUrl?: string; participantToken?: string; role: ParticipantRole; canControlProgram?: boolean; canModerate?: boolean }>);
       if (credentials.waitingForApproval) {
@@ -407,7 +426,8 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
         return;
       }
       if (!credentials.serverUrl || !credentials.participantToken) throw new Error("Der Medienzugang ist unvollständig.");
-      await media.connect(credentials.serverUrl, credentials.participantToken);
+      serverUrl = credentials.serverUrl;
+      await media.connect(serverUrl, credentials.participantToken);
       setCanControlProgram(Boolean(credentials.canControlProgram));
       setParticipantRole(credentials.role);
       await media.applyDevices(preferences);
@@ -425,11 +445,13 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
           return;
         }
       }
-      setMediaMessage("Sicher mit dem Medienserver verbunden");
+      setMediaMessage(mediaServerScope(serverUrl) === "local"
+        ? "Mit lokalem Medienserver verbunden – nur auf diesem PC erreichbar"
+        : "Sicher mit dem Medienserver verbunden");
     } catch (error) {
       await media.disconnect();
       setConnection("error");
-      setMediaMessage(messageOf(error));
+      setMediaMessage(serverUrl ? mediaConnectionMessage(error, serverUrl) : messageOf(error));
     }
   }
 
@@ -733,7 +755,7 @@ function BroadcastCanvas({ eventId, eventTitle, room, connected, fallbackName, g
   const reportProgramOutputError = useCallback((message: string) => setSwitchError(message), []);
   const updateAudioMix = useCallback((volumes: Record<string, number>) => setAudioMix(volumes), []);
 
-return <main className="broadcast-canvas"><ProgramOutputWindow open={programOutputOpen} onClosed={closeProgramOutput} onError={reportProgramOutputError}><ProgramLayout layout={programState?.layout || "single"} sources={programSources} overlay={programState?.overlay} /></ProgramOutputWindow><aside className="source-rail"><div className="rail-heading"><b>Quellen · {sources.length}</b><span className={`master-badge ${canControl ? "active" : ""}`}>{canControl ? "MASTER" : "QUELLE"}</span></div>{localRole === "host" && remoteParticipants.length > 0 && <div className="broadcast-team"><span className="eyebrow">TEAMROLLEN</span>{remoteParticipants.map((participant) => <label key={participant.identity}><b>{participant.name}</b><select className="role-select" value={participant.role} onChange={(event) => void changeRole(participant, event.target.value as AssignableRole)}><option value="cohost">Co-Host</option><option value="operator">Operator</option><option value="speaker">Sprecher</option><option value="participant">Teilnehmer</option><option value="viewer">Zuschauer</option></select></label>)}</div>}{sources.length > 0 ? sources.map((source) => <button key={source.id} className={`source ${previewSources.some((preview) => preview.id === source.id) ? "active" : ""}`} onClick={() => selectSource(source.id)}><div className="mini-preview"><ParticipantTile name={source.name} participant={source.participant} track={source.track} /></div><span><b>{source.name}</b><small>{source.participant.isLocal ? "Lokale Quelle" : "Remote-Quelle"}</small><SourceQualityLine quality={sourceQualities[source.id]} /></span></button>) : <div className="source-empty"><Video /><span>{connected ? "Warte auf Videoquellen" : "Noch nicht verbunden"}</span></div>}</aside><section className="switcher"><div className="monitors"><div><span className="monitor-label preview">VORSCHAU</span><div className="monitor"><ProgramLayout layout={layout} sources={previewSources.length > 0 ? previewSources : [{ id: "fallback", name: fallbackName, participant: participants[0] }]} overlay={normalizeBroadcastOverlay(overlayTitle, overlaySubtitle)} /></div></div><div><span className="monitor-label program">PROGRAMM · SYNCHRON</span><div key={programState?.revision || "empty"} className={`monitor program-frame ${programState?.transition === "fade" ? "fade-in" : ""}`}><ProgramLayout layout={programState?.layout || "single"} sources={programSources} overlay={programState?.overlay} /></div></div></div><div className="transition-row"><span>{canControl ? "Übergang" : "Programmbild wird vom Master gesteuert"}</span><button className={transition === "cut" ? "selected" : ""} disabled={!canControl} onClick={() => setTransition("cut")}>Schnitt</button><button className={transition === "fade" ? "selected" : ""} disabled={!canControl} onClick={() => setTransition("fade")}>Überblende</button><button className="take" disabled={previewSources.length === 0 || !canControl} onClick={() => void takePreview()}>TAKE</button></div><div className="graphics-editor"><div className="graphics-heading"><span className="eyebrow">EINBLENDUNG</span><small className={programState?.overlay ? "live" : ""}>{programState?.overlay ? "IM PROGRAMM" : "AUS"}</small></div><div className="graphics-fields"><input value={overlayTitle} onChange={(event) => setOverlayTitle(event.target.value)} placeholder="Name oder Titel" maxLength={80} disabled={!canControl} /><input value={overlaySubtitle} onChange={(event) => setOverlaySubtitle(event.target.value)} placeholder="Funktion, Thema oder Hinweis" maxLength={120} disabled={!canControl} /><button type="button" disabled={!canControl || (!overlayTitle && !overlaySubtitle)} onClick={() => { setOverlayTitle(""); setOverlaySubtitle(""); }}>Ausblenden vorbereiten</button></div><small>Die Vorschau zeigt den Entwurf. TAKE schaltet Bild und Einblendung gemeinsam.</small></div><div className="scene-strip"><button className={`scene ${layout === "single" ? "selected" : ""}`} disabled={!canControl} onClick={() => selectLayout("single")}><span>1</span><b>Einzelbild</b></button><button className={`scene ${layout === "side_by_side" ? "selected" : ""}`} disabled={!canControl} onClick={() => selectLayout("side_by_side")}><span>2</span><b>Nebeneinander</b></button><button className={`scene ${layout === "picture_in_picture" ? "selected" : ""}`} disabled={!canControl} onClick={() => selectLayout("picture_in_picture")}><span>3</span><b>Bild-in-Bild</b></button><button className="scene add" disabled={!canControl || previewSources.length === 0} onClick={() => void storeScene()}><Plus /><b>Speichern</b></button></div>{canControl && <div className="saved-scenes"><div className="saved-scenes-heading"><b>Gespeicherte Szenen</b><span>{scenesLoading ? "Lädt …" : `${scenes.length}`}</span></div>{scenes.length > 0 ? scenes.map((scene) => <div className="saved-scene" key={scene.id}><button onClick={() => loadScene(scene)}><span>{scene.layout === "single" ? "1" : "2"}</span><b>{scene.name}</b></button><button className="delete-scene" title="Szene löschen" onClick={() => void deleteScene(scene)}>×</button></div>) : !scenesLoading && <small>Noch keine Szenen gespeichert</small>}</div>}{(switchError || scenesError) && <div className="inline-error">{switchError || scenesError}</div>}</section><aside className="meter-panel"><SourceQualityMonitor sources={sources} qualities={sourceQualities} /><span className="eyebrow audio-heading">AUDIO</span><BroadcastAudioMixer room={room} participants={participants} enabled={canControl} onMixChanged={updateAudioMix} /><ProgramRecorder room={room} title={eventTitle} programState={programState} sources={sources} audioMix={audioMix} enabled={canControl} /><ProgramStreamer room={room} programState={programState} sources={sources} audioMix={audioMix} enabled={canControl} /><button className={`output-window-button ${programOutputOpen ? "active" : ""}`} onClick={() => setProgramOutputOpen((current) => !current)}><MonitorUp /><span><b>{programOutputOpen ? "Ausgabefenster schließen" : "Ausgabefenster öffnen"}</b><small>Sauberes 1080p60-Programmbild</small></span></button><div className="stream-target"><Radio /><div><b>Programmausgabe</b><span>{programState ? "Mit allen Clients synchronisiert" : "Wartet auf TAKE vom Master"}</span></div></div></aside></main>;
+return <main className="broadcast-canvas"><ProgramOutputWindow open={programOutputOpen} onClosed={closeProgramOutput} onError={reportProgramOutputError}><ProgramLayout layout={programState?.layout || "single"} sources={programSources} overlay={programState?.overlay} /></ProgramOutputWindow><aside className="source-rail"><div className="rail-heading"><b>Quellen · {sources.length}</b><span className={`master-badge ${canControl ? "active" : ""}`}>{canControl ? "MASTER" : "QUELLE"}</span></div><RundownPanel eventId={eventId} canControl={canControl} />{localRole === "host" && remoteParticipants.length > 0 && <div className="broadcast-team"><span className="eyebrow">TEAMROLLEN</span>{remoteParticipants.map((participant) => <label key={participant.identity}><b>{participant.name}</b><select className="role-select" value={participant.role} onChange={(event) => void changeRole(participant, event.target.value as AssignableRole)}><option value="cohost">Co-Host</option><option value="operator">Operator</option><option value="speaker">Sprecher</option><option value="participant">Teilnehmer</option><option value="viewer">Zuschauer</option></select></label>)}</div>}{sources.length > 0 ? sources.map((source) => <button key={source.id} className={`source ${previewSources.some((preview) => preview.id === source.id) ? "active" : ""}`} onClick={() => selectSource(source.id)}><div className="mini-preview"><ParticipantTile name={source.name} participant={source.participant} track={source.track} /></div><span><b>{source.name}</b><small>{source.participant.isLocal ? "Lokale Quelle" : "Remote-Quelle"}</small><SourceQualityLine quality={sourceQualities[source.id]} /></span></button>) : <div className="source-empty"><Video /><span>{connected ? "Warte auf Videoquellen" : "Noch nicht verbunden"}</span></div>}</aside><section className="switcher"><div className="monitors"><div><span className="monitor-label preview">VORSCHAU</span><div className="monitor"><ProgramLayout layout={layout} sources={previewSources.length > 0 ? previewSources : [{ id: "fallback", name: fallbackName, participant: participants[0] }]} overlay={normalizeBroadcastOverlay(overlayTitle, overlaySubtitle)} /></div></div><div><span className="monitor-label program">PROGRAMM · SYNCHRON</span><div key={programState?.revision || "empty"} className={`monitor program-frame ${programState?.transition === "fade" ? "fade-in" : ""}`}><ProgramLayout layout={programState?.layout || "single"} sources={programSources} overlay={programState?.overlay} /></div></div></div><div className="transition-row"><span>{canControl ? "Übergang" : "Programmbild wird vom Master gesteuert"}</span><button className={transition === "cut" ? "selected" : ""} disabled={!canControl} onClick={() => setTransition("cut")}>Schnitt</button><button className={transition === "fade" ? "selected" : ""} disabled={!canControl} onClick={() => setTransition("fade")}>Überblende</button><button className="take" disabled={previewSources.length === 0 || !canControl} onClick={() => void takePreview()}>TAKE</button></div><div className="graphics-editor"><div className="graphics-heading"><span className="eyebrow">EINBLENDUNG</span><small className={programState?.overlay ? "live" : ""}>{programState?.overlay ? "IM PROGRAMM" : "AUS"}</small></div><div className="graphics-fields"><input value={overlayTitle} onChange={(event) => setOverlayTitle(event.target.value)} placeholder="Name oder Titel" maxLength={80} disabled={!canControl} /><input value={overlaySubtitle} onChange={(event) => setOverlaySubtitle(event.target.value)} placeholder="Funktion, Thema oder Hinweis" maxLength={120} disabled={!canControl} /><button type="button" disabled={!canControl || (!overlayTitle && !overlaySubtitle)} onClick={() => { setOverlayTitle(""); setOverlaySubtitle(""); }}>Ausblenden vorbereiten</button></div><small>Die Vorschau zeigt den Entwurf. TAKE schaltet Bild und Einblendung gemeinsam.</small></div><div className="scene-strip"><button className={`scene ${layout === "single" ? "selected" : ""}`} disabled={!canControl} onClick={() => selectLayout("single")}><span>1</span><b>Einzelbild</b></button><button className={`scene ${layout === "side_by_side" ? "selected" : ""}`} disabled={!canControl} onClick={() => selectLayout("side_by_side")}><span>2</span><b>Nebeneinander</b></button><button className={`scene ${layout === "picture_in_picture" ? "selected" : ""}`} disabled={!canControl} onClick={() => selectLayout("picture_in_picture")}><span>3</span><b>Bild-in-Bild</b></button><button className="scene add" disabled={!canControl || previewSources.length === 0} onClick={() => void storeScene()}><Plus /><b>Speichern</b></button></div>{canControl && <div className="saved-scenes"><div className="saved-scenes-heading"><b>Gespeicherte Szenen</b><span>{scenesLoading ? "Lädt …" : `${scenes.length}`}</span></div>{scenes.length > 0 ? scenes.map((scene) => <div className="saved-scene" key={scene.id}><button onClick={() => loadScene(scene)}><span>{scene.layout === "single" ? "1" : "2"}</span><b>{scene.name}</b></button><button className="delete-scene" title="Szene löschen" onClick={() => void deleteScene(scene)}>×</button></div>) : !scenesLoading && <small>Noch keine Szenen gespeichert</small>}</div>}{(switchError || scenesError) && <div className="inline-error">{switchError || scenesError}</div>}</section><aside className="meter-panel"><SourceQualityMonitor sources={sources} qualities={sourceQualities} /><span className="eyebrow audio-heading">AUDIO</span><BroadcastAudioMixer room={room} participants={participants} enabled={canControl} onMixChanged={updateAudioMix} /><ProgramRecorder room={room} title={eventTitle} programState={programState} sources={sources} audioMix={audioMix} enabled={canControl} /><ProgramStreamer room={room} programState={programState} sources={sources} audioMix={audioMix} enabled={canControl} /><button className={`output-window-button ${programOutputOpen ? "active" : ""}`} onClick={() => setProgramOutputOpen((current) => !current)}><MonitorUp /><span><b>{programOutputOpen ? "Ausgabefenster schließen" : "Ausgabefenster öffnen"}</b><small>Sauberes 1080p60-Programmbild</small></span></button><div className="stream-target"><Radio /><div><b>Programmausgabe</b><span>{programState ? "Mit allen Clients synchronisiert" : "Wartet auf TAKE vom Master"}</span></div></div></aside></main>;
 }
 
 function ProgramLayout({ layout, sources, overlay }: { layout: BroadcastLayout; sources: Array<{ id: string; name: string; participant?: ParticipantMedia; track?: VideoMediaTrack }>; overlay?: BroadcastOverlay | null }) {

@@ -2,7 +2,12 @@ import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("desktop", {
   platform: process.platform,
-  version: "0.1.0",
+  version: ipcRenderer.sendSync("app:version") as string,
+  onOpenJoinLink: (callback: (joinCode: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, joinCode: string) => callback(joinCode);
+    ipcRenderer.on("app:join-link", listener);
+    return () => ipcRenderer.removeListener("app:join-link", listener);
+  },
   beginRecording: (suggestedName: string) => ipcRenderer.invoke("recording:begin", suggestedName) as Promise<boolean>,
   appendRecording: (chunk: ArrayBuffer) => ipcRenderer.invoke("recording:append", chunk) as Promise<void>,
   finishRecording: () => ipcRenderer.invoke("recording:finish") as Promise<void>,
