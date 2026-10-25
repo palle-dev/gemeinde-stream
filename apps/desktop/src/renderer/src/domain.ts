@@ -32,6 +32,7 @@ export interface MembershipRecord {
   display_name: string;
   participant_identity?: string;
   role: "host" | "cohost" | "operator" | "speaker" | "participant" | "viewer";
+  status?: "invited" | "joined" | "left" | "blocked";
 }
 
 export function createJoinCode(): string {

@@ -24,18 +24,20 @@ Deno.serve(async (req) => {
       user_email: user.email,
     });
 
+    const assignedRole = existing[0]?.role ?? (event.mode === "meeting" ? "participant" : "speaker");
+    const canPublish = assignedRole !== "viewer";
     const memberData = {
       event_id: event.id,
       event_title: event.title,
       event_mode: event.mode,
       user_email: user.email,
       display_name: displayName,
-      role: event.mode === "meeting" ? "participant" : "speaker",
+      role: assignedRole,
       status: "joined",
-      can_publish_audio: true,
-      can_publish_video: true,
-      can_share_screen: true,
-      can_control_program: false,
+      can_publish_audio: canPublish,
+      can_publish_video: canPublish,
+      can_share_screen: canPublish,
+      can_control_program: assignedRole === "cohost" || assignedRole === "operator",
       last_seen_at: new Date().toISOString(),
     };
 

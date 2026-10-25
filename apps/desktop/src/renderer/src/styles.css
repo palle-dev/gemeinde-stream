@@ -114,10 +114,11 @@ input::placeholder { color: #5e6977; }
 .mode-badge.broadcast span { background: #ff676d; box-shadow: 0 0 10px #ff676d; }
 .room-meta { display: flex; gap: 16px; flex-wrap: wrap; color: #919dac; font-size: 13px; margin: 17px 0; }
 .room-meta span { display: flex; gap: 7px; align-items: center; }
-.room-card-actions { display: grid; grid-template-columns: 1fr auto auto; gap: 7px; }
+.room-card-actions { display: grid; grid-template-columns: 1fr repeat(3, auto); gap: 7px; }
 .room-icon-action { width: 43px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: #1c242e; color: #aeb8c4; }
 .room-icon-action svg { width: 16px; }
 .room-icon-action:hover:not(:disabled) { color: var(--lime); border-color: #b8ff3d55; }
+.room-icon-action.invite:hover:not(:disabled) { color: var(--cyan); border-color: #35d5cc66; }
 .room-icon-action.delete:hover:not(:disabled) { color: #ff8589; border-color: #ff5d6355; }
 .room-icon-action:disabled { opacity: .35; }
 .empty-card { grid-column: 1 / -1; display: grid; place-items: center; align-content: center; text-align: center; color: var(--muted); }
@@ -131,6 +132,31 @@ input::placeholder { color: #5e6977; }
 .event-defaults { display: flex; gap: 18px; flex-wrap: wrap; padding: 4px 0; }
 .event-defaults label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; }
 .event-defaults input { width: 17px; height: 17px; padding: 0; accent-color: var(--lime); }
+.invitation-backdrop { z-index: 35; }
+.invitation-modal { width: min(700px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; padding: 26px; border: 1px solid #303a47; border-radius: 16px; background: #111820; box-shadow: 0 30px 100px #000; }
+.invitation-heading, .invitation-heading > div, .invitation-heading > div > span { display: flex; align-items: center; }
+.invitation-heading { justify-content: space-between; margin-bottom: 18px; }
+.invitation-heading > div { gap: 11px; }
+.invitation-heading > div > svg { color: var(--lime); }
+.invitation-heading > div > span { flex-direction: column; align-items: flex-start; gap: 2px; }
+.invitation-heading b, .invitation-heading small { display: block; }
+.invitation-heading small { color: var(--muted); }
+.copy-invitation { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #35d5cc55; border-radius: 10px; background: #10272a; color: #aef5ef; text-align: left; }
+.copy-invitation span, .copy-invitation b, .copy-invitation small { display: block; }
+.copy-invitation small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.invitation-form { display: grid; grid-template-columns: minmax(200px, 1fr) 150px auto; align-items: end; gap: 10px; margin-top: 18px; }
+.invitation-form label { margin: 0; }
+.invitation-form button { white-space: nowrap; }
+.invitation-list { margin-top: 22px; border-top: 1px solid var(--line); }
+.invitation-list-heading, .invitation-member { display: grid; align-items: center; gap: 10px; }
+.invitation-list-heading { grid-template-columns: 1fr auto; padding: 14px 4px 9px; color: var(--muted); font-size: 11px; }
+.invitation-member { grid-template-columns: minmax(0, 1fr) auto 32px; padding: 10px 4px; border-top: 1px solid #252d3888; }
+.invitation-member b, .invitation-member small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.invitation-member b { font-size: 12px; }
+.invitation-member small, .invitation-member > span { color: var(--muted); font-size: 10px; }
+.invitation-member button { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 7px; background: #1c242e; color: #ff8589; }
+.invitation-member button svg { width: 14px; }
+.invitation-list > p { padding: 18px 4px; color: var(--muted); text-align: center; }
 .mode-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
 .mode-picker button { display: grid; justify-items: start; gap: 8px; text-align: left; border: 1px solid var(--line); border-radius: 12px; padding: 18px; background: #0d1218; cursor: pointer; }
 .mode-picker button.selected { border-color: var(--lime); background: #b8ff3d0b; box-shadow: inset 0 0 0 1px #b8ff3d44; }

@@ -50,6 +50,7 @@ import { ProgramOutputWindow } from "./components/ProgramOutputWindow";
 import { DeviceSettings } from "./components/DeviceSettings";
 import { selectMeetingStage } from "./components/MeetingLayout";
 import { defaultStartTime, toDateTimeInput, toIsoDateTime } from "./components/EventScheduling";
+import { EventInvitations } from "./components/EventInvitations";
 import { resolveSceneSourceIds, useBroadcastScenes, type AvailableSceneSource, type BroadcastScene } from "./components/BroadcastScenes";
 import { BroadcastAudioMixer } from "./components/BroadcastAudioMixer";
 import { ProgramRecorder } from "./components/ProgramRecorder";
@@ -194,6 +195,7 @@ function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event:
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventRecord | null>(null);
+  const [invitingEvent, setInvitingEvent] = useState<EventRecord | null>(null);
   const [joinCode, setJoinCode] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -277,7 +279,7 @@ function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event:
         <div className="room-grid">
           {loading && <div className="empty-card">Räume werden geladen …</div>}
           {!loading && owned.length === 0 && memberships.length === 0 && <div className="empty-card"><div className="icon-box"><CalendarDays /></div><h3>Noch keine Veranstaltung</h3><p>Erstellen Sie ein Meeting oder eine Live-Produktion.</p><button className="secondary" onClick={() => setShowCreate(true)}>Jetzt erstellen</button></div>}
-          {owned.map((event) => <RoomCard key={event.id} event={event} role="Host" onOpen={() => onOpen(event)} onEdit={() => setEditingEvent(event)} onDelete={() => void deleteOwnedEvent(event)} />)}
+          {owned.map((event) => <RoomCard key={event.id} event={event} role="Host" onOpen={() => onOpen(event)} onInvite={() => setInvitingEvent(event)} onEdit={() => setEditingEvent(event)} onDelete={() => void deleteOwnedEvent(event)} />)}
           {memberships.filter((member) => !owned.some((event) => event.id === member.event_id)).map((member) => (
             <RoomCard key={member.id} event={{ id: member.event_id, title: member.event_title, mode: member.event_mode, status: "scheduled", host_email: "", join_code: "", livekit_room_name: "" }} role={member.role} onOpen={() => void openMembership(member)} />
           ))}
@@ -285,13 +287,14 @@ function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event:
       </main>
       {showCreate && <CreateRoom user={user} onClose={() => setShowCreate(false)} onCreated={(event) => { setShowCreate(false); setOwned((current) => [event, ...current]); }} />}
       {editingEvent && <EditRoom event={editingEvent} onClose={() => setEditingEvent(null)} onUpdated={(updated) => { setEditingEvent(null); setOwned((current) => current.map((event) => event.id === updated.id ? updated : event)); }} />}
+      {invitingEvent && <EventInvitations event={invitingEvent} onClose={() => setInvitingEvent(null)} />}
     </div>
   );
 }
 
-function RoomCard({ event, role, onOpen, onEdit, onDelete }: { event: EventRecord; role: string; onOpen: () => void; onEdit?: () => void; onDelete?: () => void }) {
+function RoomCard({ event, role, onOpen, onInvite, onEdit, onDelete }: { event: EventRecord; role: string; onOpen: () => void; onInvite?: () => void; onEdit?: () => void; onDelete?: () => void }) {
   const ended = event.status === "ended";
-  return <article className={`room-card ${ended ? "ended" : ""}`}><div className="card-badges"><div className={`mode-badge ${event.mode}`}><span />{event.mode === "meeting" ? "Meeting" : "Live-Produktion"}</div><div className={`status-badge ${event.status}`}>{event.status === "live" ? "LIVE" : ended ? "BEENDET" : "GEPLANT"}</div></div><h3>{event.title}</h3><p>{event.description || (event.mode === "meeting" ? "Interaktiver Raum für Gespräche und Bildschirmfreigabe" : "Regie, Quellen und Programmausgabe")}</p><div className="room-meta"><span><Users size={16} /> {role}{event.max_participants ? ` · max. ${event.max_participants}` : ""}</span>{event.starts_at && <span><CalendarDays size={16} /> {new Date(event.starts_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</span>}</div><div className="room-card-actions"><button className="secondary full" onClick={onOpen} disabled={ended}>{ended ? "Veranstaltung beendet" : "Studio öffnen"}</button>{onEdit && <button className="room-icon-action" title="Bearbeiten" onClick={onEdit} disabled={event.status === "live"}><Pencil /></button>}{onDelete && <button className="room-icon-action delete" title="Löschen" onClick={onDelete} disabled={event.status === "live"}><Trash2 /></button>}</div></article>;
+  return <article className={`room-card ${ended ? "ended" : ""}`}><div className="card-badges"><div className={`mode-badge ${event.mode}`}><span />{event.mode === "meeting" ? "Meeting" : "Live-Produktion"}</div><div className={`status-badge ${event.status}`}>{event.status === "live" ? "LIVE" : ended ? "BEENDET" : "GEPLANT"}</div></div><h3>{event.title}</h3><p>{event.description || (event.mode === "meeting" ? "Interaktiver Raum für Gespräche und Bildschirmfreigabe" : "Regie, Quellen und Programmausgabe")}</p><div className="room-meta"><span><Users size={16} /> {role}{event.max_participants ? ` · max. ${event.max_participants}` : ""}</span>{event.starts_at && <span><CalendarDays size={16} /> {new Date(event.starts_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</span>}</div><div className="room-card-actions"><button className="secondary full" onClick={onOpen} disabled={ended}>{ended ? "Veranstaltung beendet" : "Studio öffnen"}</button>{onInvite && <button className="room-icon-action invite" title="Teilnehmer einladen" onClick={onInvite} disabled={ended}><UserPlus /></button>}{onEdit && <button className="room-icon-action" title="Bearbeiten" onClick={onEdit} disabled={event.status === "live"}><Pencil /></button>}{onDelete && <button className="room-icon-action delete" title="Löschen" onClick={onDelete} disabled={event.status === "live"}><Trash2 /></button>}</div></article>;
 }
 
 function EventDetailsFields({ title, setTitle, description, setDescription, startsAt, setStartsAt, maxParticipants, setMaxParticipants, defaultCameraOn, setDefaultCameraOn, defaultMicrophoneOn, setDefaultMicrophoneOn }: { title: string; setTitle: (value: string) => void; description: string; setDescription: (value: string) => void; startsAt: string; setStartsAt: (value: string) => void; maxParticipants: number; setMaxParticipants: (value: number) => void; defaultCameraOn: boolean; setDefaultCameraOn: (value: boolean) => void; defaultMicrophoneOn: boolean; setDefaultMicrophoneOn: (value: boolean) => void }) {
