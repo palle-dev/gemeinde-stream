@@ -18,10 +18,12 @@ interface RecordingFile {
 const recordingFiles = new Map<number, RecordingFile>();
 
 interface ActiveStream {
-  process: ChildProcessWithoutNullStreams;
+  targets: Map<string, { id: string; label: string; process: ChildProcessWithoutNullStreams }>;
   writes: Promise<void>;
   stopping: boolean;
 }
+
+interface StreamDestination { id: string; label: string; serverUrl: string; streamKey: string; }
 
 const activeStreams = new Map<number, ActiveStream>();
 let mainWindow: BrowserWindow | null = null;
@@ -105,13 +107,12 @@ async function stopStream(senderId: number, force = false): Promise<void> {
   if (!active) return;
   active.stopping = true;
   await active.writes.catch(() => undefined);
-  if (force) active.process.kill();
-  else active.process.stdin.end();
-  await new Promise<void>((resolve) => {
-    if (active.process.exitCode !== null) return resolve();
-    const timeout = setTimeout(() => { active.process.kill(); resolve(); }, 5_000);
-    active.process.once("close", () => { clearTimeout(timeout); resolve(); });
-  });
+  for (const target of active.targets.values()) force ? target.process.kill() : target.process.stdin.end();
+  await Promise.all([...active.targets.values()].map((target) => new Promise<void>((resolve) => {
+    if (target.process.exitCode !== null) return resolve();
+    const timeout = setTimeout(() => { target.process.kill(); resolve(); }, 5_000);
+    target.process.once("close", () => { clearTimeout(timeout); resolve(); });
+  })));
   activeStreams.delete(senderId);
 }
 
@@ -158,47 +159,46 @@ ipcMain.handle("recording:cancel", async (event) => {
   await discardRecording(event.sender.id);
 });
 
-ipcMain.handle("stream:begin", async (event, serverUrl: string, streamKey: string) => {
+ipcMain.handle("stream:begin", async (event, destinationsOrServer: StreamDestination[] | string, legacyStreamKey?: string) => {
   if (activeStreams.has(event.sender.id)) throw new Error("Es läuft bereits eine Programmausspielung.");
-  const target = streamTarget(serverUrl, streamKey);
+  const destinations = typeof destinationsOrServer === "string" ? [{ id: "legacy", label: "Livestream", serverUrl: destinationsOrServer, streamKey: legacyStreamKey ?? "" }] : destinationsOrServer;
+  if (!Array.isArray(destinations) || destinations.length < 1 || destinations.length > 5) throw new Error("Wählen Sie zwischen einem und fünf Streaming-Zielen.");
+  const normalized = destinations.map((destination) => ({ ...destination, id: String(destination.id).slice(0, 100), label: String(destination.label).trim().slice(0, 100), target: streamTarget(destination.serverUrl, destination.streamKey) }));
+  if (normalized.some((destination) => !destination.id || !destination.label) || new Set(normalized.map((destination) => destination.id)).size !== normalized.length) throw new Error("Streaming-Ziele sind ungültig oder doppelt.");
   const executable = resolveFfmpegPath();
-  const child = spawn(executable, [
-    "-hide_banner", "-loglevel", "warning", "-f", "webm", "-i", "pipe:0",
-    "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
-    "-profile:v", "high", "-level", "4.2", "-pix_fmt", "yuv420p",
-    "-r", "60", "-g", "120", "-b:v", "8000k", "-maxrate", "8000k", "-bufsize", "16000k",
-    "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-f", "flv", target,
-  ], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
-
-  await new Promise<void>((resolve, reject) => {
-    child.once("spawn", resolve);
-    child.once("error", (error) => reject(error));
-  }).catch((cause) => {
-    child.kill();
-    if ((cause as NodeJS.ErrnoException).code === "ENOENT") {
-      throw new Error("FFmpeg wurde nicht gefunden. Installieren Sie FFmpeg oder setzen Sie GEMEINDE_STREAM_FFMPEG auf den vollständigen Pfad.");
+  const targets = new Map<string, { id: string; label: string; process: ChildProcessWithoutNullStreams }>();
+  try {
+    for (const destination of normalized) {
+      const child = spawn(executable, ["-hide_banner", "-loglevel", "warning", "-f", "webm", "-i", "pipe:0", "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", "-profile:v", "high", "-level", "4.2", "-pix_fmt", "yuv420p", "-r", "60", "-g", "120", "-b:v", "8000k", "-maxrate", "8000k", "-bufsize", "16000k", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-f", "flv", destination.target], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+      await new Promise<void>((resolve, reject) => { child.once("spawn", resolve); child.once("error", reject); });
+      child.stdout.resume(); child.stderr.resume(); targets.set(destination.id, { id: destination.id, label: destination.label, process: child });
     }
-    throw new Error("Die Streaming-Engine konnte nicht gestartet werden.");
-  });
-
-  const active: ActiveStream = { process: child, writes: Promise.resolve(), stopping: false };
+  } catch (cause) {
+    targets.forEach((target) => target.process.kill());
+    if ((cause as NodeJS.ErrnoException).code === "ENOENT") throw new Error("FFmpeg wurde nicht gefunden. Installieren Sie FFmpeg oder setzen Sie GEMEINDE_STREAM_FFMPEG auf den vollständigen Pfad.");
+    throw new Error("Mindestens eine Streaming-Engine konnte nicht gestartet werden.");
+  }
+  const active: ActiveStream = { targets, writes: Promise.resolve(), stopping: false };
   activeStreams.set(event.sender.id, active);
-  child.stdout.resume();
-  child.stderr.resume();
-  child.once("close", (code) => {
-    if (activeStreams.get(event.sender.id)?.process !== child) return;
-    activeStreams.delete(event.sender.id);
-    if (!active.stopping && !event.sender.isDestroyed()) event.sender.send("stream:status", { state: "error", message: code === 0 ? "Die Streaming-Verbindung wurde beendet." : "Der Streaming-Server hat die Verbindung beendet." });
+  for (const target of targets.values()) target.process.once("close", (code) => {
+    const current = activeStreams.get(event.sender.id); if (!current || current.targets.get(target.id)?.process !== target.process) return;
+    current.targets.delete(target.id); if (current.targets.size === 0) activeStreams.delete(event.sender.id);
+    if (!active.stopping && !event.sender.isDestroyed()) event.sender.send("stream:status", { state: "target-error", targetId: target.id, label: target.label, message: code === 0 ? `${target.label} wurde beendet.` : `${target.label} hat die Verbindung beendet.` });
   });
   return true;
 });
 
 ipcMain.handle("stream:append", async (event, chunk: ArrayBuffer) => {
   const active = activeStreams.get(event.sender.id);
-  if (!active || active.stopping || active.process.stdin.destroyed) throw new Error("Keine aktive Streaming-Verbindung.");
-  active.writes = active.writes.then(() => new Promise<void>((resolve, reject) => {
-    active.process.stdin.write(Buffer.from(chunk), (error) => error ? reject(new Error("Streaming-Daten konnten nicht gesendet werden.")) : resolve());
-  }));
+  if (!active || active.stopping || active.targets.size === 0) throw new Error("Keine aktive Streaming-Verbindung.");
+  active.writes = active.writes.then(async () => {
+    const buffer = Buffer.from(chunk);
+    const results = await Promise.allSettled([...active.targets.values()].map((target) => new Promise<void>((resolve, reject) => {
+      if (target.process.stdin.destroyed) return reject(new Error(`${target.label} ist nicht mehr verbunden.`));
+      target.process.stdin.write(buffer, (error) => error ? reject(error) : resolve());
+    })));
+    if (results.every((result) => result.status === "rejected")) throw new Error("Alle Streaming-Ziele sind ausgefallen.");
+  });
   await active.writes;
 });
 

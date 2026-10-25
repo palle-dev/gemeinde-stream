@@ -503,6 +503,18 @@ input::placeholder { color: #5e6977; }
 .program-streamer > button svg { flex: 0 0 auto; width: 19px; }
 .program-streamer > button span, .program-streamer > button b, .program-streamer > button small { display: block; }
 .program-streamer > button small { margin-top: 3px; color: var(--muted); font-size: 9px; }
+.stream-profile-list { display: grid; gap: 7px; }
+.stream-profile-list article { position: relative; display: grid; gap: 5px; padding: 7px; border: 1px solid var(--line); border-radius: 8px; background: #0c1117; }
+.stream-profile-list article.live { border-color: #ff596477; background: #251217; }
+.stream-profile-list article.failed { border-color: #ff9a5477; }
+.stream-profile-heading { display: grid; grid-template-columns: 18px 1fr 25px; align-items: center; gap: 5px; }
+.stream-profile-heading input { width: 14px; height: 14px; padding: 0; }
+.stream-profile-heading select { min-width: 0; height: 27px; padding: 0 5px; font-size: 9px; }
+.stream-profile-heading button { height: 25px; display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: #ff8589; }
+.stream-profile-heading button svg { width: 13px; }
+.program-streamer.multi .stream-profile-list input { padding: 6px; font-size: 9px; }
+.profile-live { color: #ff7f87; font-size: 9px; font-weight: 800; }
+.program-streamer > button.add-stream-target { justify-content: center; padding: 7px; border-color: var(--line); background: #151d26; color: var(--muted); font-size: 10px; }
 .streamer-error { color: #ff8f93; font-size: 10px; line-height: 1.35; }
 .output-window-button { width: 100%; display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 11px; border: 1px solid var(--line); border-radius: 9px; background: #161d26; color: #c9d2dc; text-align: left; }
 .output-window-button svg { flex: 0 0 auto; color: var(--cyan); }
