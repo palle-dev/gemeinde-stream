@@ -256,6 +256,14 @@ input::placeholder { color: #5e6977; }
 .chat-form button { display: flex; justify-content: center; align-items: center; gap: 7px; border: 0; border-radius: 8px; padding: 9px; background: var(--cyan); color: #071010; font-weight: 750; }
 .chat-form button:disabled { opacity: .4; }
 .inline-error { margin-top: 10px; color: #ff8f93; font-size: 12px; }
+.meeting-recorder { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.meeting-recorder > button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #ff676d55; border-radius: 9px; background: #2c1519; color: #ffb0b3; text-align: left; }
+.meeting-recorder > button.recording { border-color: #ff676d; background: #561a20; animation: recording-pulse 1.6s ease-in-out infinite; }
+.meeting-recorder > button:disabled { opacity: .35; }
+.meeting-recorder > button svg { flex: 0 0 auto; width: 19px; }
+.meeting-recorder > button span, .meeting-recorder > button b, .meeting-recorder > button small { display: block; }
+.meeting-recorder > button small { margin-top: 3px; color: #d58d91; font-size: 10px; }
+.meeting-recorder .recorder-error { display: block; margin-top: 7px; color: #ff8f93; }
 .tile-hand { position: absolute; z-index: 2; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; padding: 7px 9px; border-radius: 8px; color: #1a1304; background: #ffd166; font-size: 11px; font-weight: 800; }
 .broadcast-canvas { min-height: 0; display: grid; grid-template-columns: 275px 1fr 225px; background: #070a0e; }
 .source-rail, .meter-panel { min-height: 0; background: #10151c; padding: 16px; }
