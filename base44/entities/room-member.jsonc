@@ -9,7 +9,7 @@
     "display_name": { "type": "string" },
     "participant_identity": { "type": "string", "description": "LiveKit identity of the connected user" },
     "role": { "type": "string", "enum": ["host", "cohost", "operator", "speaker", "participant", "viewer"], "default": "participant" },
-    "status": { "type": "string", "enum": ["invited", "joined", "left", "blocked"], "default": "joined" },
+    "status": { "type": "string", "enum": ["invited", "waiting", "joined", "left", "blocked"], "default": "joined" },
     "can_publish_audio": { "type": "boolean", "default": true },
     "can_publish_video": { "type": "boolean", "default": true },
     "can_share_screen": { "type": "boolean", "default": true },

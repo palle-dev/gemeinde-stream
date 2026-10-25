@@ -23,8 +23,13 @@ Deno.serve(async (req) => {
       event_id: event.id,
       user_email: user.email,
     });
+    if (existing[0]?.status === "blocked") {
+      return Response.json({ error: "Der Host hat den Beitritt zu diesem Raum abgelehnt" }, { status: 403 });
+    }
 
     const assignedRole = existing[0]?.role ?? (event.mode === "meeting" ? "participant" : "speaker");
+    const previouslyApproved = existing[0]?.status === "invited" || existing[0]?.status === "joined";
+    const waitingForApproval = event.mode === "meeting" && event.waiting_room_enabled === true && !previouslyApproved;
     const canPublish = assignedRole !== "viewer";
     const memberData = {
       event_id: event.id,
@@ -33,7 +38,7 @@ Deno.serve(async (req) => {
       user_email: user.email,
       display_name: displayName,
       role: assignedRole,
-      status: "joined",
+      status: waitingForApproval ? "waiting" : "joined",
       can_publish_audio: canPublish,
       can_publish_video: canPublish,
       can_share_screen: canPublish,
@@ -45,7 +50,7 @@ Deno.serve(async (req) => {
       ? await base44.asServiceRole.entities.RoomMember.update(existing[0].id, memberData)
       : await base44.asServiceRole.entities.RoomMember.create(memberData);
 
-    return Response.json({ eventId: event.id, member });
+    return Response.json({ eventId: event.id, member, waitingForApproval });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" }, { status: 500 });
   }

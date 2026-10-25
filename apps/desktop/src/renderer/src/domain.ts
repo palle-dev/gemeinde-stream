@@ -19,6 +19,7 @@ export interface EventRecord {
   livekit_room_name: string;
   default_camera_on?: boolean;
   default_microphone_on?: boolean;
+  waiting_room_enabled?: boolean;
   max_participants?: number;
   created_date?: string;
 }
@@ -32,7 +33,7 @@ export interface MembershipRecord {
   display_name: string;
   participant_identity?: string;
   role: "host" | "cohost" | "operator" | "speaker" | "participant" | "viewer";
-  status?: "invited" | "joined" | "left" | "blocked";
+  status?: "invited" | "waiting" | "joined" | "left" | "blocked";
 }
 
 export function createJoinCode(): string {

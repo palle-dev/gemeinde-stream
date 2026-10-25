@@ -264,6 +264,28 @@ input::placeholder { color: #5e6977; }
 .meeting-recorder > button span, .meeting-recorder > button b, .meeting-recorder > button small { display: block; }
 .meeting-recorder > button small { margin-top: 3px; color: #d58d91; font-size: 10px; }
 .meeting-recorder .recorder-error { display: block; margin-top: 7px; color: #ff8f93; }
+.waiting-shell { min-height: 100vh; display: grid; place-items: center; padding: 32px; background: radial-gradient(circle at 50% 30%, #17272c 0, #090d12 58%, #06080b 100%); }
+.waiting-card { width: min(520px, 100%); padding: 44px; border: 1px solid var(--line); border-radius: 18px; background: #10161e; text-align: center; box-shadow: 0 28px 90px #0008; }
+.waiting-icon { width: 76px; height: 76px; display: grid; place-items: center; margin: 0 auto 22px; border-radius: 50%; color: var(--lime); background: #b8ff3d12; border: 1px solid #b8ff3d44; }
+.waiting-icon svg { width: 34px; height: 34px; }
+.waiting-icon.rejected { color: #ff8589; background: #ff5d6312; border-color: #ff5d6355; }
+.waiting-card h1 { margin: 10px 0; font-size: 29px; }
+.waiting-card p { margin: 0 0 24px; color: var(--muted); line-height: 1.6; }
+.waiting-progress { height: 4px; margin: 24px 0; overflow: hidden; border-radius: 4px; background: #202a35; }
+.waiting-progress span { display: block; width: 35%; height: 100%; border-radius: inherit; background: var(--lime); animation: waiting-slide 1.4s ease-in-out infinite alternate; }
+@keyframes waiting-slide { to { transform: translateX(185%); } }
+.waiting-controls { margin-bottom: 13px; padding: 10px; border: 1px solid #ffd16655; border-radius: 9px; background: #2b2415; }
+.waiting-controls-title { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; color: #ffd166; font-size: 12px; }
+.waiting-controls-title svg { width: 17px; }
+.waiting-controls-title span { margin-left: auto; min-width: 21px; padding: 2px 6px; border-radius: 10px; background: #ffd16622; text-align: center; }
+.waiting-person { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 7px; padding-top: 8px; border-top: 1px solid #ffd16622; }
+.waiting-person .avatar { width: 29px; height: 29px; font-size: 10px; }
+.waiting-person b, .waiting-person small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.waiting-person b { font-size: 11px; }
+.waiting-person small { color: var(--muted); font-size: 9px; }
+.waiting-person button { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 1px solid #b8ff3d55; border-radius: 7px; background: #18251a; color: var(--lime); }
+.waiting-person button.reject { border-color: #ff5d6355; background: #2b171a; color: #ff8589; }
+.waiting-person button svg { width: 14px; }
 .tile-hand { position: absolute; z-index: 2; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; padding: 7px 9px; border-radius: 8px; color: #1a1304; background: #ffd166; font-size: 11px; font-weight: 800; }
 .broadcast-canvas { min-height: 0; display: grid; grid-template-columns: 275px 1fr 225px; background: #070a0e; }
 .source-rail, .meter-panel { min-height: 0; background: #10151c; padding: 16px; }

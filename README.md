@@ -9,6 +9,8 @@ Hosts können Veranstaltungen mit Beschreibung, Startzeit, Teilnehmerlimit sowie
 
 Teilnehmer können vorab per E-Mail-Adresse als Co-Host, Operator, Sprecher, Teilnehmer oder Zuschauer eingeladen werden. Der Raum erscheint im Dashboard des eingeladenen Kontos, und die vorab vergebene Rolle bleibt beim Beitritt erhalten. Ein fertiger Einladungstext mit Termin und Raumcode lässt sich für E-Mail oder Messenger kopieren.
 
+Meetings können mit einem Warteraum geschützt werden. Nicht vorab eingeladene Personen bleiben dort ohne Medienzugriff, bis Host, Co-Host oder Operator sie zulassen; abgelehnte Zugänge werden für die Veranstaltung gesperrt. Eingeladene Personen gelangen weiterhin direkt in den Raum.
+
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.

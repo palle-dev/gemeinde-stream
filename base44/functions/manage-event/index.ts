@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
       max_participants: maxParticipants,
       default_camera_on: Boolean(body.defaultCameraOn),
       default_microphone_on: Boolean(body.defaultMicrophoneOn),
+      waiting_room_enabled: Boolean(body.waitingRoomEnabled),
     };
     const updated = await base44.asServiceRole.entities.Event.update(event.id, changes);
     const members = await base44.asServiceRole.entities.RoomMember.filter({ event_id: event.id }, "created_date", 500, 0);

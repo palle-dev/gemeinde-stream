@@ -23,6 +23,12 @@ Deno.serve(async (req) => {
     if (!isHost && !member && user.role !== "admin") {
       return Response.json({ error: "Kein Zugriff auf diesen Raum" }, { status: 403 });
     }
+    if (!isHost && member?.status === "waiting") {
+      return Response.json({ waitingForApproval: true, role: member.role ?? "participant" });
+    }
+    if (!isHost && member?.status === "blocked") {
+      return Response.json({ error: "Der Host hat den Beitritt zu diesem Raum abgelehnt" }, { status: 403 });
+    }
 
     const apiKey = Deno.env.get("LIVEKIT_API_KEY");
     const apiSecret = Deno.env.get("LIVEKIT_API_SECRET");
@@ -32,9 +38,10 @@ Deno.serve(async (req) => {
     }
 
     const role = isHost ? "host" : (member?.role ?? "participant");
-    if (member && member.participant_identity !== user.id) {
+    if (member && (member.participant_identity !== user.id || member.status !== "joined")) {
       await base44.asServiceRole.entities.RoomMember.update(member.id, {
         participant_identity: user.id,
+        status: "joined",
         last_seen_at: new Date().toISOString(),
       });
     }

@@ -14,6 +14,7 @@
     "max_participants": { "type": "integer", "minimum": 2, "maximum": 500, "default": 50 },
     "default_camera_on": { "type": "boolean", "default": true },
     "default_microphone_on": { "type": "boolean", "default": true },
+    "waiting_room_enabled": { "type": "boolean", "default": true },
     "recording_enabled": { "type": "boolean", "default": false },
     "streaming_enabled": { "type": "boolean", "default": false }
   },

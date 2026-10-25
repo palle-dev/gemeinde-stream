@@ -19,7 +19,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Kein Zugriff auf diesen Raum" }, { status: 403 });
     }
 
-    const members = await base44.asServiceRole.entities.RoomMember.filter({ event_id: event.id });
+    const actorRole = memberships[0]?.role;
+    const canModerate = isHost || user.role === "admin" || actorRole === "cohost" || actorRole === "operator";
+    const members = canModerate
+      ? await base44.asServiceRole.entities.RoomMember.filter({ event_id: event.id })
+      : memberships;
     return Response.json({ event, members });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" }, { status: 500 });

@@ -13,14 +13,18 @@ Deno.serve(async (req) => {
     const action = String(body.action ?? "assign");
     const participantIdentity = String(body.participantIdentity ?? "");
     const role = String(body.role ?? "");
-    if (!eventId || !["assign", "list", "invite", "remove"].includes(action)) {
+    if (!eventId || !["assign", "list", "invite", "remove", "admit", "reject"].includes(action)) {
       return Response.json({ error: "Ungültige Mitgliederanfrage" }, { status: 400 });
     }
 
     const event = await base44.asServiceRole.entities.Event.get(eventId);
     if (!event) return Response.json({ error: "Raum nicht gefunden" }, { status: 404 });
-    if (event.host_email !== user.email && user.role !== "admin") {
-      return Response.json({ error: "Nur der Host darf Rollen vergeben" }, { status: 403 });
+    const actorMemberships = event.host_email === user.email || user.role === "admin"
+      ? []
+      : await base44.asServiceRole.entities.RoomMember.filter({ event_id: event.id, user_email: user.email });
+    const actorRole = event.host_email === user.email ? "host" : actorMemberships[0]?.role;
+    if (user.role !== "admin" && !["host", "cohost", "operator"].includes(String(actorRole))) {
+      return Response.json({ error: "Nur die Moderation darf Mitglieder verwalten" }, { status: 403 });
     }
 
     if (action === "list") {
@@ -29,6 +33,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "invite") {
+      if (event.host_email !== user.email && user.role !== "admin") {
+        return Response.json({ error: "Nur der Host darf Personen vorab einladen" }, { status: 403 });
+      }
       const email = String(body.email ?? "").trim().toLowerCase().slice(0, 254);
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !assignableRoles.includes(role) || email === event.host_email.toLowerCase()) {
         return Response.json({ error: "E-Mail-Adresse oder Rolle ist ungültig" }, { status: 400 });
@@ -61,6 +68,22 @@ Deno.serve(async (req) => {
       if (member.user_email === event.host_email) return Response.json({ error: "Der Host kann nicht entfernt werden" }, { status: 409 });
       await base44.asServiceRole.entities.RoomMember.delete(member.id);
       return Response.json({ removed: true });
+    }
+
+    if (action === "admit" || action === "reject") {
+      const memberId = String(body.memberId ?? "");
+      const member = memberId ? await base44.asServiceRole.entities.RoomMember.get(memberId) : null;
+      if (!member || member.event_id !== event.id || member.status !== "waiting") {
+        return Response.json({ error: "Wartende Person wurde nicht gefunden" }, { status: 404 });
+      }
+      const updated = await base44.asServiceRole.entities.RoomMember.update(member.id, {
+        status: action === "admit" ? "joined" : "blocked",
+      });
+      return Response.json({ member: updated });
+    }
+
+    if (event.host_email !== user.email && user.role !== "admin") {
+      return Response.json({ error: "Nur der Host darf Rollen vergeben" }, { status: 403 });
     }
 
     if (!participantIdentity || !assignableRoles.includes(role)) {
