@@ -18,6 +18,26 @@ function createWindow(): void {
   });
 
   window.webContents.setWindowOpenHandler(({ url }) => {
+    if (url === "about:blank") {
+      return {
+        action: "allow",
+        overrideBrowserWindowOptions: {
+          width: 1920,
+          height: 1080,
+          useContentSize: true,
+          minWidth: 640,
+          minHeight: 360,
+          backgroundColor: "#000000",
+          title: "Gemeinde Stream · Programmausgabe",
+          autoHideMenuBar: true,
+          webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true,
+          },
+        },
+      };
+    }
     void shell.openExternal(url);
     return { action: "deny" };
   });
