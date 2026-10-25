@@ -17,8 +17,26 @@ Windows-Anwendung und Base44-Backend für zwei Betriebsarten:
 
 ```powershell
 npm install
-npm run dev
+Copy-Item .env.example .env.local
+# Zugangsdaten in .env.local eintragen
+npm run dev:local
 ```
+
+`dev:local` startet zuerst den lokalen LiveKit-Server und danach den Windows-Client im Entwicklungsmodus. Die Zugangsdaten bleiben ausschließlich in der von Git ignorierten Datei `.env.local`.
+
+Der Medienserver kann auch separat verwaltet und geprüft werden:
+
+```powershell
+npm run livekit:setup
+npm run livekit:start
+npm run livekit:status
+npm run livekit:smoke
+npm run livekit:stop
+```
+
+Beim ersten Start wird die geprüfte Windows-Version von LiveKit bei Bedarf automatisch heruntergeladen; `livekit:setup` kann dafür auch ausdrücklich aufgerufen werden.
+
+Die lokale LiveKit-Adresse lautet `ws://localhost:7880`. Base44 muss während der lokalen Entwicklungsphase dieselbe URL und dieselben API-Zugangsdaten für `create-livekit-token` verwenden.
 
 ## Prüfungen
 
