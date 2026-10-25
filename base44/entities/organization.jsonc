@@ -1,0 +1,17 @@
+{
+  "name": "Organization",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "description": "Name der Gemeinde oder Organisation" },
+    "slug": { "type": "string", "description": "Kurzer eindeutiger Bezeichner" },
+    "owner_email": { "type": "string", "format": "email" },
+    "status": { "type": "string", "enum": ["active", "archived"], "default": "active" }
+  },
+  "required": ["name", "slug", "owner_email"],
+  "rls": {
+    "create": { "data.owner_email": "{{user.email}}" },
+    "read": { "$or": [{ "data.owner_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "update": { "$or": [{ "data.owner_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "delete": { "$or": [{ "data.owner_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] }
+  }
+}

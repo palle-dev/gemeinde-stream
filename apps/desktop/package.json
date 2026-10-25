@@ -1,0 +1,55 @@
+{
+  "name": "@gemeinde-stream/desktop",
+  "version": "0.2.0",
+  "description": "Windows-Studio für Gemeinde-Meetings und Live-Übertragungen",
+  "author": "Gemeinde Stream",
+  "private": true,
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "dist:win": "npm run build && electron-builder --win nsis",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@base44/sdk": "*",
+    "livekit-client": "*",
+    "lucide-react": "*",
+    "react": "*",
+    "react-dom": "*"
+  },
+  "devDependencies": {
+    "@types/node": "*",
+    "@types/react": "*",
+    "@types/react-dom": "*",
+    "@vitejs/plugin-react": "*",
+    "electron": "45.0.0",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "*",
+    "typescript": "*",
+    "vite": "*",
+    "vitest": "*"
+  },
+  "build": {
+    "appId": "de.gemeinde.stream",
+    "productName": "Gemeinde Stream",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

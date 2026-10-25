@@ -1,0 +1,4 @@
+{
+  "name": "create-livekit-token",
+  "entry": "index.ts"
+}

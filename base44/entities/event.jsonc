@@ -1,0 +1,27 @@
+{
+  "name": "Event",
+  "type": "object",
+  "properties": {
+    "organization_id": { "type": "string" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "mode": { "type": "string", "enum": ["meeting", "broadcast"], "default": "meeting" },
+    "status": { "type": "string", "enum": ["scheduled", "live", "ended"], "default": "scheduled" },
+    "starts_at": { "type": "string", "format": "date-time" },
+    "host_email": { "type": "string", "format": "email" },
+    "join_code": { "type": "string", "minLength": 6, "maxLength": 12 },
+    "livekit_room_name": { "type": "string" },
+    "max_participants": { "type": "integer", "minimum": 2, "maximum": 500, "default": 50 },
+    "default_camera_on": { "type": "boolean", "default": true },
+    "default_microphone_on": { "type": "boolean", "default": true },
+    "recording_enabled": { "type": "boolean", "default": false },
+    "streaming_enabled": { "type": "boolean", "default": false }
+  },
+  "required": ["title", "mode", "host_email", "join_code", "livekit_room_name"],
+  "rls": {
+    "create": { "data.host_email": "{{user.email}}" },
+    "read": { "$or": [{ "data.host_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "update": { "$or": [{ "data.host_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "delete": { "$or": [{ "data.host_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "RoomMember",
+  "type": "object",
+  "properties": {
+    "event_id": { "type": "string" },
+    "event_title": { "type": "string" },
+    "event_mode": { "type": "string", "enum": ["meeting", "broadcast"] },
+    "user_email": { "type": "string", "format": "email" },
+    "display_name": { "type": "string" },
+    "role": { "type": "string", "enum": ["host", "cohost", "operator", "speaker", "participant", "viewer"], "default": "participant" },
+    "status": { "type": "string", "enum": ["invited", "joined", "left", "blocked"], "default": "joined" },
+    "can_publish_audio": { "type": "boolean", "default": true },
+    "can_publish_video": { "type": "boolean", "default": true },
+    "can_share_screen": { "type": "boolean", "default": true },
+    "can_control_program": { "type": "boolean", "default": false },
+    "last_seen_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["event_id", "event_title", "event_mode", "user_email", "display_name", "role"],
+  "rls": {
+    "create": { "data.user_email": "{{user.email}}" },
+    "read": { "$or": [{ "data.user_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "update": { "$or": [{ "data.user_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "delete": { "$or": [{ "data.user_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] }
+  }
+}

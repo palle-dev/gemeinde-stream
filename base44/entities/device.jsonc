@@ -1,0 +1,19 @@
+{
+  "name": "Device",
+  "type": "object",
+  "properties": {
+    "user_email": { "type": "string", "format": "email" },
+    "label": { "type": "string" },
+    "platform": { "type": "string", "enum": ["windows"], "default": "windows" },
+    "app_version": { "type": "string" },
+    "last_seen_at": { "type": "string", "format": "date-time" },
+    "capabilities": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["user_email", "label"],
+  "rls": {
+    "create": { "data.user_email": "{{user.email}}" },
+    "read": { "$or": [{ "data.user_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "update": { "$or": [{ "data.user_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "delete": { "$or": [{ "data.user_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] }
+  }
+}

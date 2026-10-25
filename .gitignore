@@ -1,0 +1,14 @@
+node_modules/
+dist/
+out/
+release/
+outputs/
+work/
+.env
+.env.*
+!.env.example
+*.log
+*.blockmap
+.DS_Store
+Thumbs.db
+

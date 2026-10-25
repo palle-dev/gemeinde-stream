@@ -1,0 +1,416 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Camera,
+  CameraOff,
+  Check,
+  Clipboard,
+  Hand,
+  LogOut,
+  MailCheck,
+  MessageSquare,
+  Mic,
+  MicOff,
+  MonitorUp,
+  Plus,
+  Radio,
+  Settings,
+  ShieldCheck,
+  Users,
+  UserPlus,
+  Video,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
+import { base44 } from "./lib/base44";
+import { MediaRoom, type ConnectionState } from "./lib/room";
+import {
+  RoomAudio,
+  VideoTrackElement,
+  useRoomMedia,
+  type ParticipantMedia,
+  type VideoMediaTrack,
+} from "./components/RoomMedia";
+import { setHandRaised, useMeetingChat } from "./components/MeetingCollaboration";
+import {
+  createJoinCode,
+  createLiveKitRoomName,
+  type EventRecord,
+  type MembershipRecord,
+  type RoomMode,
+  type UserInfo,
+} from "./domain";
+
+type FunctionEnvelope<T> = T | { data: T };
+
+function unwrap<T>(value: FunctionEnvelope<T>): T {
+  return typeof value === "object" && value !== null && "data" in value
+    ? (value as { data: T }).data
+    : (value as T);
+}
+
+function messageOf(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) return String(error.message);
+  return "Ein unbekannter Fehler ist aufgetreten.";
+}
+
+export default function App() {
+  const [user, setUser] = useState<UserInfo | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [activeEvent, setActiveEvent] = useState<EventRecord | null>(null);
+
+  useEffect(() => {
+    base44.auth.isAuthenticated()
+      .then((authenticated) => authenticated ? base44.auth.me() : null)
+      .then((result) => setUser(result ? result as UserInfo : null))
+      .catch(() => setUser(null))
+      .finally(() => setCheckingAuth(false));
+  }, []);
+
+  if (checkingAuth) {
+    return <div className="splash"><div className="brand-mark"><Radio /></div><span>Gemeinde Stream wird vorbereitet …</span></div>;
+  }
+
+  if (!user) return <Login onAuthenticated={(nextUser) => setUser(nextUser)} />;
+  if (activeEvent) return <Studio event={activeEvent} user={user} onLeave={() => setActiveEvent(null)} />;
+
+  return (
+    <Dashboard
+      user={user}
+      onOpen={setActiveEvent}
+      onLogout={() => {
+        setUser(null);
+        base44.auth.logout();
+      }}
+    />
+  );
+}
+
+function Login({ onAuthenticated }: { onAuthenticated: (user: UserInfo) => void }) {
+  const [view, setView] = useState<"login" | "register" | "verify">("login");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      if (view === "register") {
+        await base44.auth.register({ email, password });
+        setView("verify");
+        return;
+      }
+
+      if (view === "verify") {
+        await base44.auth.verifyOtp({ email, otpCode: otp });
+        const response = await base44.auth.loginViaEmailPassword(email, password);
+        const updated = await base44.auth.updateMe({ full_name: fullName });
+        onAuthenticated((updated || response.user) as UserInfo);
+        return;
+      }
+
+      const response = await base44.auth.loginViaEmailPassword(email, password);
+      onAuthenticated(response.user as UserInfo);
+    } catch (cause) {
+      setError(messageOf(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="login-shell">
+      <section className="login-copy">
+        <div className="eyebrow"><span className="status-dot" /> LIVE & VERBUNDEN</div>
+        <h1>Zusammenkommen.<br /><em>Überall.</em></h1>
+        <p>Meetings, Gottesdienste und hybride Veranstaltungen in einer gemeinsamen Produktionsumgebung.</p>
+        <div className="feature-row">
+          <span><Video size={18} /> 1080p Video</span>
+          <span><Users size={18} /> Meeting & Regie</span>
+          <span><ShieldCheck size={18} /> Geschützte Räume</span>
+        </div>
+      </section>
+      <section className="login-panel">
+        <div className="logo-lockup"><div className="brand-mark"><Radio /></div><div><b>Gemeinde Stream</b><small>Studio für Windows</small></div></div>
+        <form onSubmit={submit}>
+          <h2>{view === "login" ? "Willkommen zurück" : view === "register" ? "Konto erstellen" : "E-Mail bestätigen"}</h2>
+          <p>{view === "login" ? "Melden Sie sich mit Ihrem Gemeindekonto an." : view === "register" ? "Erstellen Sie einen persönlichen Zugang für Meetings und Regie." : `Wir haben einen Bestätigungscode an ${email} gesendet.`}</p>
+          {view === "register" && <label>Anzeigename<input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Vor- und Nachname" required /></label>}
+          {view !== "verify" && <label>E-Mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@gemeinde.de" required /></label>}
+          {view !== "verify" && <label>Passwort<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mindestens 8 Zeichen" minLength={8} required /></label>}
+          {view === "verify" && <label>Bestätigungscode<input className="otp-input" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\s/g, ""))} placeholder="123456" inputMode="numeric" autoComplete="one-time-code" required autoFocus /></label>}
+          {error && <div className="error-banner">{error}</div>}
+          <button className="primary" disabled={busy}>{busy ? "Bitte warten …" : view === "login" ? "Anmelden" : view === "register" ? "Registrieren" : "Code bestätigen"}</button>
+          {view === "verify" && <button type="button" className="auth-link" onClick={() => void base44.auth.resendOtp(email)}><MailCheck /> Code erneut senden</button>}
+          <button type="button" className="auth-link" onClick={() => { setError(""); setView(view === "login" ? "register" : "login"); }}>
+            {view === "login" ? <><UserPlus /> Noch kein Konto? Registrieren</> : "Zurück zur Anmeldung"}
+          </button>
+        </form>
+        <small className="version">Version {window.desktop?.version ?? "0.1.0"}</small>
+      </section>
+    </main>
+  );
+}
+
+function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event: EventRecord) => void; onLogout: () => void }) {
+  const [owned, setOwned] = useState<EventRecord[]>([]);
+  const [memberships, setMemberships] = useState<MembershipRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [notice, setNotice] = useState("");
+
+  async function reload() {
+    setLoading(true);
+    try {
+      const [events, memberRows] = await Promise.all([
+        base44.entities.Event.filter({ host_email: user.email }, "-created_date", 100, 0),
+        base44.entities.RoomMember.filter({ user_email: user.email }, "-created_date", 100, 0),
+      ]);
+      setOwned(events as EventRecord[]);
+      setMemberships(memberRows as MembershipRecord[]);
+    } catch (error) {
+      setNotice(messageOf(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void reload(); }, []);
+
+  async function joinRoom(event: React.FormEvent) {
+    event.preventDefault();
+    setNotice("");
+    try {
+      const result = unwrap(await base44.functions.invoke("join-room", {
+        joinCode: joinCode.trim().toUpperCase(),
+        displayName: user.full_name || user.email,
+      }) as FunctionEnvelope<{ eventId: string }>);
+      const room = unwrap(await base44.functions.invoke("get-room", { eventId: result.eventId }) as FunctionEnvelope<{ event: EventRecord }>);
+      onOpen(room.event);
+    } catch (error) {
+      setNotice(messageOf(error));
+    }
+  }
+
+  async function openMembership(member: MembershipRecord) {
+    try {
+      const room = unwrap(await base44.functions.invoke("get-room", { eventId: member.event_id }) as FunctionEnvelope<{ event: EventRecord }>);
+      onOpen(room.event);
+    } catch (error) {
+      setNotice(messageOf(error));
+    }
+  }
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="logo-lockup"><div className="brand-mark small"><Radio /></div><div><b>Gemeinde Stream</b><small>Studio</small></div></div>
+        <nav>
+          <button className="nav-active"><CalendarDays /> Veranstaltungen</button>
+          <button><Video /> Studio</button>
+          <button><Users /> Team</button>
+          <button><Settings /> Einstellungen</button>
+        </nav>
+        <div className="user-card"><div className="avatar">{(user.full_name || user.email).slice(0, 2).toUpperCase()}</div><div><b>{user.full_name || "Administrator"}</b><small>{user.email}</small></div><button onClick={onLogout} title="Abmelden"><LogOut /></button></div>
+      </aside>
+      <main className="dashboard">
+        <header><div><span className="eyebrow">ÜBERSICHT</span><h1>Ihre Veranstaltungen</h1><p>Meetings durchführen oder eine komplette Live-Produktion steuern.</p></div><button className="primary compact" onClick={() => setShowCreate(true)}><Plus /> Neue Veranstaltung</button></header>
+        {notice && <div className="error-banner">{notice}</div>}
+        <section className="quick-actions">
+          <form className="join-card" onSubmit={joinRoom}><div className="icon-box"><Users /></div><div><b>Einem Raum beitreten</b><span>Meeting- oder Produktionscode eingeben</span></div><input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="RAUMCODE" maxLength={12} required /><button className="secondary">Beitreten</button></form>
+          <div className="health-card"><div className="health-top"><span><Wifi /> Systemstatus</span><b>Backend bereit</b></div><div className="health-meter ready"><span /></div><small>Base44 und der lokale LiveKit-Medienserver sind konfiguriert.</small></div>
+        </section>
+        <section className="section-heading"><h2>Geplant und zuletzt verwendet</h2><span>{owned.length + memberships.filter((member) => !owned.some((event) => event.id === member.event_id)).length} Räume</span></section>
+        <div className="room-grid">
+          {loading && <div className="empty-card">Räume werden geladen …</div>}
+          {!loading && owned.length === 0 && memberships.length === 0 && <div className="empty-card"><div className="icon-box"><CalendarDays /></div><h3>Noch keine Veranstaltung</h3><p>Erstellen Sie ein Meeting oder eine Live-Produktion.</p><button className="secondary" onClick={() => setShowCreate(true)}>Jetzt erstellen</button></div>}
+          {owned.map((event) => <RoomCard key={event.id} event={event} role="Host" onOpen={() => onOpen(event)} />)}
+          {memberships.filter((member) => !owned.some((event) => event.id === member.event_id)).map((member) => (
+            <RoomCard key={member.id} event={{ id: member.event_id, title: member.event_title, mode: member.event_mode, status: "scheduled", host_email: "", join_code: "", livekit_room_name: "" }} role={member.role} onOpen={() => void openMembership(member)} />
+          ))}
+        </div>
+      </main>
+      {showCreate && <CreateRoom user={user} onClose={() => setShowCreate(false)} onCreated={(event) => { setShowCreate(false); setOwned((current) => [event, ...current]); onOpen(event); }} />}
+    </div>
+  );
+}
+
+function RoomCard({ event, role, onOpen }: { event: EventRecord; role: string; onOpen: () => void }) {
+  return <article className="room-card"><div className={`mode-badge ${event.mode}`}><span />{event.mode === "meeting" ? "Meeting" : "Live-Produktion"}</div><h3>{event.title}</h3><p>{event.description || (event.mode === "meeting" ? "Interaktiver Raum für Gespräche und Bildschirmfreigabe" : "Regie, Quellen und Programmausgabe")}</p><div className="room-meta"><span><Users size={16} /> {role}</span>{event.starts_at && <span><CalendarDays size={16} /> {new Date(event.starts_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</span>}</div><button className="secondary full" onClick={onOpen}>Studio öffnen</button></article>;
+}
+
+function CreateRoom({ user, onClose, onCreated }: { user: UserInfo; onClose: () => void; onCreated: (event: EventRecord) => void }) {
+  const [title, setTitle] = useState("");
+  const [mode, setMode] = useState<RoomMode>("meeting");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const created = await base44.entities.Event.create({
+        title,
+        description: mode === "meeting" ? "Interaktives Online-Meeting" : "Live-Produktion",
+        mode,
+        status: "scheduled",
+        host_email: user.email,
+        join_code: createJoinCode(),
+        livekit_room_name: createLiveKitRoomName(),
+        max_participants: 50,
+        default_camera_on: true,
+        default_microphone_on: true,
+        recording_enabled: false,
+        streaming_enabled: mode === "broadcast",
+      }) as EventRecord;
+      await base44.entities.RoomMember.create({
+        event_id: created.id,
+        event_title: created.title,
+        event_mode: created.mode,
+        user_email: user.email,
+        display_name: user.full_name || user.email,
+        role: "host",
+        status: "joined",
+        can_publish_audio: true,
+        can_publish_video: true,
+        can_share_screen: true,
+        can_control_program: true,
+        last_seen_at: new Date().toISOString(),
+      });
+      onCreated(created);
+    } catch (cause) {
+      setError(messageOf(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <div className="modal-backdrop"><form className="modal" onSubmit={submit}><span className="eyebrow">NEUER RAUM</span><h2>Was möchten Sie durchführen?</h2><div className="mode-picker"><button type="button" className={mode === "meeting" ? "selected" : ""} onClick={() => setMode("meeting")}><Users /><b>Meeting</b><span>Alle sprechen, Video und Bildschirm teilen</span></button><button type="button" className={mode === "broadcast" ? "selected" : ""} onClick={() => setMode("broadcast")}><Radio /><b>Live-Produktion</b><span>Master-Regie, Quellen und Programmausgabe</span></button></div><label>Titel<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Sonntagsgottesdienst" required autoFocus /></label>{error && <div className="error-banner">{error}</div>}<div className="modal-actions"><button type="button" className="ghost" onClick={onClose}>Abbrechen</button><button className="primary" disabled={busy}>{busy ? "Wird erstellt …" : "Raum erstellen"}</button></div></form></div>;
+}
+
+function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; onLeave: () => void }) {
+  const [connection, setConnection] = useState<ConnectionState>("idle");
+  const [mediaMessage, setMediaMessage] = useState("Medienserver noch nicht verbunden");
+  const [mic, setMic] = useState(false);
+  const [camera, setCamera] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const media = useMemo(() => new MediaRoom(setConnection), []);
+
+  useEffect(() => {
+    return () => { void media.disconnect(); };
+  }, [media]);
+
+  async function connect() {
+    setMediaMessage("Zugang wird angefordert …");
+    try {
+      const credentials = unwrap(await base44.functions.invoke("create-livekit-token", { eventId: event.id }) as FunctionEnvelope<{ serverUrl: string; participantToken: string }>);
+      await media.connect(credentials.serverUrl, credentials.participantToken);
+      setMediaMessage("Sicher mit dem Medienserver verbunden");
+    } catch (error) {
+      setConnection("error");
+      setMediaMessage(messageOf(error));
+    }
+  }
+
+  async function updateMedium(action: () => Promise<void>, apply: () => void) {
+    try {
+      await action();
+      apply();
+    } catch (error) {
+      setMediaMessage(messageOf(error));
+    }
+  }
+
+  async function toggleMic() {
+    const next = !mic;
+    await updateMedium(() => media.setMicrophone(next), () => setMic(next));
+  }
+
+  async function toggleCamera() {
+    const next = !camera;
+    await updateMedium(() => media.setCamera(next), () => setCamera(next));
+  }
+
+  async function toggleSharing() {
+    const next = !sharing;
+    await updateMedium(() => media.setScreenShare(next), () => setSharing(next));
+  }
+
+  async function leave() {
+    await media.disconnect();
+    onLeave();
+  }
+
+  async function copyCode() {
+    await navigator.clipboard.writeText(event.join_code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  const connected = connection === "connected";
+  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} /> : <BroadcastCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} />}<footer className="control-bar"><div className="control-group"><button disabled={!connected} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={!connected} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={!connected} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button></div><button className="connect-button" onClick={() => void connect()} disabled={connection === "connecting" || connected}>{connected ? "Verbunden" : connection === "connecting" ? "Verbinde …" : "Medien verbinden"}</button><button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></footer></div>;
+}
+
+function MeetingCanvas({ room, connected, fallbackName }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string }) {
+  const participants = useRoomMedia(room, connected);
+  const { messages, send } = useMeetingChat(room, connected, fallbackName);
+  const [sideTab, setSideTab] = useState<"participants" | "chat">("participants");
+  const [chatText, setChatText] = useState("");
+  const [collaborationError, setCollaborationError] = useState("");
+  const localHandRaised = participants.find((participant) => participant.isLocal)?.handRaised ?? false;
+  const tiles = participants.flatMap((participant) => [
+    { key: `${participant.identity}-camera`, participant, name: participant.name, track: participant.cameraTrack },
+    ...(participant.screenTrack ? [{ key: `${participant.identity}-screen`, participant, name: `${participant.name} · Bildschirm`, track: participant.screenTrack }] : []),
+  ]);
+
+  async function submitChat(event: React.FormEvent) {
+    event.preventDefault();
+    if (!chatText.trim()) return;
+    try {
+      await send(chatText);
+      setChatText("");
+      setCollaborationError("");
+    } catch (error) {
+      setCollaborationError(messageOf(error));
+    }
+  }
+
+  async function toggleHand() {
+    try {
+      await setHandRaised(room, !localHandRaised);
+      setCollaborationError("");
+    } catch (error) {
+      setCollaborationError(messageOf(error));
+    }
+  }
+
+  return <main className="meeting-canvas"><section className="meeting-grid">{tiles.length > 0 ? tiles.map((tile, index) => <ParticipantTile key={tile.key} name={tile.name} participant={tile.participant} track={tile.track} primary={index === 0} />) : <ParticipantTile name={fallbackName} primary />}<div className="invite-tile"><Users /><h3>{connected ? "Weitere Teilnehmer einladen" : "Medien verbinden"}</h3><p>{connected ? "Teilen Sie den Raumcode aus der Kopfleiste." : "Verbinden Sie zuerst den Medienserver über die Schaltfläche unten."}</p></div></section><aside className="meeting-side"><div className="side-tabs"><button className={sideTab === "participants" ? "active" : ""} onClick={() => setSideTab("participants")}>Teilnehmer</button><button className={sideTab === "chat" ? "active" : ""} onClick={() => setSideTab("chat")}><MessageSquare size={15} /> Chat</button></div>{sideTab === "participants" ? <div className="participants-panel">{participants.length > 0 ? participants.map((participant) => <div className="participant-row" key={participant.identity}><div className={`avatar ${participant.isSpeaking ? "speaking" : ""}`}>{participant.name.slice(0, 2).toUpperCase()}</div><div><b>{participant.name}</b><span>{participant.isLocal ? "Sie" : "Teilnehmer"}</span></div><div className="participant-status">{participant.handRaised && <Hand className="hand-raised" size={17} />}{participant.microphoneMuted ? <MicOff size={16} /> : <Mic size={16} />}</div></div>) : <p className="side-empty">Noch nicht verbunden</p>}<button className={`raise-hand ${localHandRaised ? "active" : ""}`} disabled={!connected} onClick={() => void toggleHand()}><Hand /> {localHandRaised ? "Hand senken" : "Hand heben"}</button></div> : <div className="chat-panel"><div className="chat-messages">{messages.length > 0 ? messages.map((message) => <div className={`chat-message ${message.isLocal ? "local" : ""}`} key={message.id}><div><b>{message.senderName}</b><time>{new Date(message.sentAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.text}</p></div>) : <p className="side-empty">Noch keine Nachrichten</p>}</div><form className="chat-form" onSubmit={submitChat}><input value={chatText} onChange={(event) => setChatText(event.target.value)} placeholder="Nachricht schreiben …" maxLength={2000} disabled={!connected} /><button disabled={!connected || !chatText.trim()}><MessageSquare size={16} /> Senden</button></form></div>}{collaborationError && <div className="inline-error">{collaborationError}</div>}</aside></main>;
+}
+
+function BroadcastCanvas({ room, connected, fallbackName }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string }) {
+  const participants = useRoomMedia(room, connected);
+  const sources = participants.flatMap((participant) => [
+    { id: `${participant.identity}-camera`, name: participant.name, participant, track: participant.cameraTrack },
+    ...(participant.screenTrack ? [{ id: `${participant.identity}-screen`, name: `${participant.name} · Bildschirm`, participant, track: participant.screenTrack }] : []),
+  ]);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [programId, setProgramId] = useState<string | null>(null);
+  const preview = sources.find((source) => source.id === previewId) || sources[0];
+  const program = sources.find((source) => source.id === programId) || sources[0];
+
+  return <main className="broadcast-canvas"><aside className="source-rail"><div className="rail-heading"><b>Quellen · {sources.length}</b><button><Plus /></button></div>{sources.length > 0 ? sources.map((source) => <button key={source.id} className={`source ${preview?.id === source.id ? "active" : ""}`} onClick={() => setPreviewId(source.id)}><div className="mini-preview"><ParticipantTile name={source.name} participant={source.participant} track={source.track} /></div><span><b>{source.name}</b><small>{source.participant.isLocal ? "Lokale Quelle" : "Remote-Quelle"} · adaptiv</small></span></button>) : <div className="source-empty"><Video /><span>{connected ? "Warte auf Videoquellen" : "Noch nicht verbunden"}</span></div>}</aside><section className="switcher"><div className="monitors"><div><span className="monitor-label preview">VORSCHAU</span><div className="monitor"><ParticipantTile name={preview?.name || fallbackName} participant={preview?.participant} track={preview?.track} /></div></div><div><span className="monitor-label program">PROGRAMM</span><div className="monitor program-frame"><ParticipantTile name={program?.name || "Noch kein Programmbild"} participant={program?.participant} track={program?.track} /></div></div></div><div className="transition-row"><span>Übergang</span><button className="selected">Schnitt</button><button>Überblende</button><button className="take" disabled={!preview} onClick={() => setProgramId(preview?.id || null)}>TAKE</button></div><div className="scene-strip"><button className="scene selected"><span>1</span><b>Einzelbild</b></button><button className="scene"><span>2</span><b>Nebeneinander</b></button><button className="scene"><span>3</span><b>Bild-in-Bild</b></button><button className="scene add"><Plus /><b>Szene</b></button></div></section><aside className="meter-panel"><span className="eyebrow">AUDIO</span><div className="audio-channel"><b>{program?.name || "Programmbus"}</b><div className="meter"><i /><i /><i /><i /><i /></div><input type="range" defaultValue="78" /></div><div className="stream-target"><Radio /><div><b>Programmausgabe</b><span>Lokale Vorschau aktiv</span></div></div></aside></main>;
+}
+
+function ParticipantTile({ name, participant, track, primary = false }: { name: string; participant?: ParticipantMedia; track?: VideoMediaTrack; primary?: boolean }) {
+  return <div className={`participant-tile ${primary ? "primary-tile" : ""} ${participant?.isSpeaking ? "speaking" : ""}`}><div className="video-placeholder">{track ? <VideoTrackElement track={track} muted={participant?.isLocal} /> : <div className="avatar large">{name.slice(0, 2).toUpperCase()}</div>}</div>{participant?.handRaised && <div className="tile-hand"><Hand size={16} /> Hand gehoben</div>}<div className="tile-label"><span>{name}{participant?.isLocal ? " (Sie)" : ""}</span>{track ? <Camera size={15} /> : <CameraOff size={15} />}</div></div>;
+}

@@ -1,0 +1,29 @@
+{
+  "name": "Scene",
+  "type": "object",
+  "properties": {
+    "event_id": { "type": "string" },
+    "owner_email": { "type": "string", "format": "email" },
+    "name": { "type": "string" },
+    "layout": { "type": "string", "enum": ["single", "side_by_side", "grid", "picture_in_picture"], "default": "single" },
+    "source_slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "slot": { "type": "integer" },
+          "participant_identity": { "type": "string" },
+          "track_source": { "type": "string" }
+        }
+      }
+    },
+    "is_program": { "type": "boolean", "default": false }
+  },
+  "required": ["event_id", "owner_email", "name", "layout"],
+  "rls": {
+    "create": { "data.owner_email": "{{user.email}}" },
+    "read": { "$or": [{ "data.owner_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "update": { "$or": [{ "data.owner_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "delete": { "$or": [{ "data.owner_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] }
+  }
+}

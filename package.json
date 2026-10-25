@@ -1,0 +1,23 @@
+{
+  "name": "gemeinde-stream",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Steuerungs- und Streaming-Plattform fuer Gemeinde-Veranstaltungen",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @gemeinde-stream/desktop",
+    "dist:win": "npm run dist:win --workspace @gemeinde-stream/desktop",
+    "dev": "npm run dev --workspace @gemeinde-stream/desktop",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "base44": "^0.2.2",
+    "livekit-server-sdk": "^2.19.2"
+  }
+}
