@@ -294,7 +294,12 @@ input::placeholder { color: #5e6977; }
 .waiting-person button.reject { border-color: #ff5d6355; background: #2b171a; color: #ff8589; }
 .waiting-person button svg { width: 14px; }
 .tile-hand { position: absolute; z-index: 2; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; padding: 7px 9px; border-radius: 8px; color: #1a1304; background: #ffd166; font-size: 11px; font-weight: 800; }
-.broadcast-canvas { min-height: 0; display: grid; grid-template-columns: 275px 1fr 225px; background: #070a0e; }
+.broadcast-canvas { position: relative; min-height: 0; display: grid; grid-template-columns: 275px 1fr 225px; background: #070a0e; }
+.broadcast-tally { position: absolute; z-index: 20; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; padding: 6px 11px; border: 1px solid #4a5664; border-radius: 999px; background: #10161edf; color: #9ca8b4; font-size: 10px; font-weight: 800; letter-spacing: .05em; box-shadow: 0 5px 20px #0008; pointer-events: none; }
+.broadcast-tally span { width: 8px; height: 8px; border-radius: 50%; background: #697480; }
+.broadcast-tally.on-air { border-color: #ff4e59; background: #3a1116ed; color: #fff; }
+.broadcast-tally.on-air span { background: #ff4e59; box-shadow: 0 0 12px #ff4e59; animation: tally-pulse 1.2s ease-in-out infinite; }
+@keyframes tally-pulse { 50% { opacity: .45; } }
 .source-rail, .meter-panel { min-height: 0; background: #10151c; padding: 16px; }
 .source-rail { border-right: 1px solid var(--line); overflow-y: auto; }
 .meter-panel { border-left: 1px solid var(--line); overflow-y: auto; }
