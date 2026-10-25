@@ -7,5 +7,6 @@ declare module "@base44/sdk" {
     "join-room": true;
     "manage-room-member": true;
     "manage-broadcast-scenes": true;
+    "manage-event": true;
   }
 }
