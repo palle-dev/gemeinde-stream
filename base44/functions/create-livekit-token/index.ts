@@ -46,7 +46,12 @@ Deno.serve(async (req) => {
       roomAdmin: isHost || role === "cohost" || role === "operator",
     });
 
-    return Response.json({ serverUrl, participantToken: await token.toJwt() });
+    return Response.json({
+      serverUrl,
+      participantToken: await token.toJwt(),
+      role,
+      canControlProgram: isHost || role === "cohost" || role === "operator",
+    });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" }, { status: 500 });
   }

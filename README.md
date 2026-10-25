@@ -3,7 +3,9 @@
 Windows-Anwendung und Base44-Backend für zwei Betriebsarten:
 
 - **Meeting:** interaktive Räume mit Kamera, Mikrofon und Bildschirmfreigabe
-- **Broadcast:** Master-Regie mit Vorschau, Programmbild, Szenen und externen Quellen
+- **Broadcast:** rollenbasierte Master-Regie mit Vorschau, synchronisiertem Programmbild, Szenen und Remote-Quellen
+
+In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 ## Projektstruktur
 
