@@ -5,6 +5,7 @@ import {
   Room,
   RoomEvent,
   Track,
+  type ConnectionQuality,
   type LocalVideoTrack,
   type RemoteVideoTrack,
 } from "livekit-client";
@@ -18,6 +19,7 @@ export interface ParticipantMedia {
   isLocal: boolean;
   isSpeaking: boolean;
   audioLevel: number;
+  connectionQuality: ConnectionQuality;
   cameraTrack?: VideoMediaTrack;
   screenTrack?: VideoMediaTrack;
   microphoneMuted: boolean;
@@ -37,6 +39,7 @@ function toParticipantMedia(participant: Participant, isLocal: boolean): Partici
     isLocal,
     isSpeaking: participant.isSpeaking,
     audioLevel: participant.audioLevel,
+    connectionQuality: participant.connectionQuality,
     cameraTrack: camera?.videoTrack,
     screenTrack: screen?.videoTrack,
     microphoneMuted: !microphone || microphone.isMuted,
@@ -64,6 +67,7 @@ export function useRoomMedia(room: Room, connected: boolean): ParticipantMedia[]
       RoomEvent.ActiveSpeakersChanged,
       RoomEvent.ParticipantMetadataChanged,
       RoomEvent.ParticipantAttributesChanged,
+      RoomEvent.ConnectionQualityChanged,
     ] as const;
 
     events.forEach((event) => room.on(event, refresh));
