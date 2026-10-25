@@ -8,6 +8,7 @@ import {
   type LocalVideoTrack,
   type RemoteVideoTrack,
 } from "livekit-client";
+import { participantRole, type ParticipantRole } from "./MeetingModeration";
 
 export type VideoMediaTrack = LocalVideoTrack | RemoteVideoTrack;
 
@@ -19,7 +20,9 @@ export interface ParticipantMedia {
   cameraTrack?: VideoMediaTrack;
   screenTrack?: VideoMediaTrack;
   microphoneMuted: boolean;
+  microphoneTrackSid?: string;
   handRaised: boolean;
+  role: ParticipantRole;
 }
 
 function toParticipantMedia(participant: Participant, isLocal: boolean): ParticipantMedia {
@@ -35,7 +38,9 @@ function toParticipantMedia(participant: Participant, isLocal: boolean): Partici
     cameraTrack: camera?.videoTrack,
     screenTrack: screen?.videoTrack,
     microphoneMuted: !microphone || microphone.isMuted,
+    microphoneTrackSid: microphone?.trackSid,
     handRaised: participant.attributes.handRaised === "true",
+    role: participantRole(participant.metadata),
   };
 }
 

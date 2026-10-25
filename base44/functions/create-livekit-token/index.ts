@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       canPublish,
       canSubscribe: true,
       canPublishData: true,
-      canUpdateOwnMetadata: true,
+      canUpdateOwnMetadata: false,
       roomAdmin: isHost || role === "cohost" || role === "operator",
     });
 
@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
       participantToken: await token.toJwt(),
       role,
       canControlProgram: isHost || role === "cohost" || role === "operator",
+      canModerate: isHost || role === "cohost" || role === "operator",
     });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" }, { status: 500 });

@@ -9,6 +9,8 @@ In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und �
 
 Vor dem Beitritt steht ein Vorraum mit Kameravorschau, Anzeigename sowie Auswahl von Kamera, Mikrofon und Lautsprecher bereit. Die persönlichen Geräte- und Ein/Aus-Einstellungen werden lokal für den nächsten Raum gespeichert.
 
+In Meetings sehen alle Teilnehmer ihre Rollen. Host, Co-Host und Operator können untergeordnete Rollen stummschalten oder aus dem Raum entfernen; Host und gleichrangige Moderatoren sind vor unzulässigen Eingriffen geschützt.
+
 ## Projektstruktur
 
 - `apps/desktop` – Electron-, React- und LiveKit-Client

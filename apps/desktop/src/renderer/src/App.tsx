@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   CalendarDays,
@@ -19,7 +19,9 @@ import {
   ShieldCheck,
   Users,
   UserPlus,
+  UserMinus,
   Video,
+  VolumeX,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -32,8 +34,14 @@ import {
   type ParticipantMedia,
   type VideoMediaTrack,
 } from "./components/RoomMedia";
-import { setHandRaised, useMeetingChat } from "./components/MeetingCollaboration";
+import { useMeetingChat, useRaisedHands } from "./components/MeetingCollaboration";
 import { PreJoin } from "./components/PreJoin";
+import {
+  canModerateRole,
+  roleLabel,
+  useMeetingModeration,
+  type ParticipantRole,
+} from "./components/MeetingModeration";
 import {
   useBroadcastCoordination,
   type BroadcastLayout,
@@ -311,6 +319,7 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [canControlProgram, setCanControlProgram] = useState(false);
+  const [participantRole, setParticipantRole] = useState<ParticipantRole>("participant");
   const [joined, setJoined] = useState(false);
   const media = useMemo(() => new MediaRoom(setConnection), []);
 
@@ -321,9 +330,10 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
   async function connect(preferences: MediaPreferences) {
     setMediaMessage("Zugang wird angefordert …");
     try {
-      const credentials = unwrap(await base44.functions.invoke("create-livekit-token", { eventId: event.id, displayName: preferences.displayName }) as FunctionEnvelope<{ serverUrl: string; participantToken: string; role: string; canControlProgram: boolean }>);
+      const credentials = unwrap(await base44.functions.invoke("create-livekit-token", { eventId: event.id, displayName: preferences.displayName }) as FunctionEnvelope<{ serverUrl: string; participantToken: string; role: ParticipantRole; canControlProgram: boolean; canModerate: boolean }>);
       await media.connect(credentials.serverUrl, credentials.participantToken);
       setCanControlProgram(credentials.canControlProgram);
+      setParticipantRole(credentials.role);
       await media.applyDevices(preferences);
       if (preferences.microphoneEnabled) await media.setMicrophone(true);
       if (preferences.cameraEnabled) await media.setCamera(true);
@@ -374,14 +384,25 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
   }
 
   const connected = connection === "connected";
+  const handleModerationMute = useCallback(() => {
+    setMic(false);
+    setMediaMessage("Ihr Mikrofon wurde von der Moderation stummgeschaltet");
+  }, []);
+  const handleModerationRemove = useCallback(() => {
+    window.alert("Sie wurden von der Moderation aus dem Raum entfernt.");
+    onLeave();
+  }, [onLeave]);
   if (!joined) return <PreJoin title={event.title} mode={event.mode} initialName={user.full_name || user.email} defaultCameraOn={event.default_camera_on} defaultMicrophoneOn={event.default_microphone_on} busy={connection === "connecting"} error={connection === "error" ? mediaMessage : ""} onCancel={onLeave} onJoin={connect} />;
 
-  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} /> : <BroadcastCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} grantedControl={canControlProgram} />}<footer className="control-bar"><div className="control-group"><button disabled={!connected} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={!connected} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={!connected} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button></div><button className="connect-button" disabled>{connected ? "Verbunden" : "Verbindung getrennt"}</button><button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></footer></div>;
+  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} localRole={participantRole} onModerationMute={handleModerationMute} onModerationRemove={handleModerationRemove} /> : <BroadcastCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} grantedControl={canControlProgram} />}<footer className="control-bar"><div className="control-group"><button disabled={!connected} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={!connected} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={!connected} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button></div><button className="connect-button" disabled>{connected ? "Verbunden" : "Verbindung getrennt"}</button><button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></footer></div>;
 }
 
-function MeetingCanvas({ room, connected, fallbackName }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string }) {
-  const participants = useRoomMedia(room, connected);
+function MeetingCanvas({ room, connected, fallbackName, localRole, onModerationMute, onModerationRemove }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string; localRole: ParticipantRole; onModerationMute: () => void; onModerationRemove: () => void }) {
+  const mediaParticipants = useRoomMedia(room, connected);
   const { messages, send } = useMeetingChat(room, connected, fallbackName);
+  const { raisedIdentities, setRaised } = useRaisedHands(room, connected);
+  const participants = mediaParticipants.map((participant) => ({ ...participant, handRaised: raisedIdentities.has(participant.identity) }));
+  const { moderate } = useMeetingModeration(room, connected, localRole, onModerationMute, onModerationRemove);
   const [sideTab, setSideTab] = useState<"participants" | "chat">("participants");
   const [chatText, setChatText] = useState("");
   const [collaborationError, setCollaborationError] = useState("");
@@ -405,14 +426,24 @@ function MeetingCanvas({ room, connected, fallbackName }: { room: MediaRoom["roo
 
   async function toggleHand() {
     try {
-      await setHandRaised(room, !localHandRaised);
+      await setRaised(!localHandRaised);
       setCollaborationError("");
     } catch (error) {
       setCollaborationError(messageOf(error));
     }
   }
 
-  return <main className="meeting-canvas"><section className="meeting-grid">{tiles.length > 0 ? tiles.map((tile, index) => <ParticipantTile key={tile.key} name={tile.name} participant={tile.participant} track={tile.track} primary={index === 0} />) : <ParticipantTile name={fallbackName} primary />}<div className="invite-tile"><Users /><h3>{connected ? "Weitere Teilnehmer einladen" : "Medien verbinden"}</h3><p>{connected ? "Teilen Sie den Raumcode aus der Kopfleiste." : "Verbinden Sie zuerst den Medienserver über die Schaltfläche unten."}</p></div></section><aside className="meeting-side"><div className="side-tabs"><button className={sideTab === "participants" ? "active" : ""} onClick={() => setSideTab("participants")}>Teilnehmer</button><button className={sideTab === "chat" ? "active" : ""} onClick={() => setSideTab("chat")}><MessageSquare size={15} /> Chat</button></div>{sideTab === "participants" ? <div className="participants-panel">{participants.length > 0 ? participants.map((participant) => <div className="participant-row" key={participant.identity}><div className={`avatar ${participant.isSpeaking ? "speaking" : ""}`}>{participant.name.slice(0, 2).toUpperCase()}</div><div><b>{participant.name}</b><span>{participant.isLocal ? "Sie" : "Teilnehmer"}</span></div><div className="participant-status">{participant.handRaised && <Hand className="hand-raised" size={17} />}{participant.microphoneMuted ? <MicOff size={16} /> : <Mic size={16} />}</div></div>) : <p className="side-empty">Noch nicht verbunden</p>}<button className={`raise-hand ${localHandRaised ? "active" : ""}`} disabled={!connected} onClick={() => void toggleHand()}><Hand /> {localHandRaised ? "Hand senken" : "Hand heben"}</button></div> : <div className="chat-panel"><div className="chat-messages">{messages.length > 0 ? messages.map((message) => <div className={`chat-message ${message.isLocal ? "local" : ""}`} key={message.id}><div><b>{message.senderName}</b><time>{new Date(message.sentAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.text}</p></div>) : <p className="side-empty">Noch keine Nachrichten</p>}</div><form className="chat-form" onSubmit={submitChat}><input value={chatText} onChange={(event) => setChatText(event.target.value)} placeholder="Nachricht schreiben …" maxLength={2000} disabled={!connected} /><button disabled={!connected || !chatText.trim()}><MessageSquare size={16} /> Senden</button></form></div>}{collaborationError && <div className="inline-error">{collaborationError}</div>}</aside></main>;
+  async function moderateParticipant(participant: ParticipantMedia, action: "mute" | "remove") {
+    if (action === "remove" && !window.confirm(`${participant.name} wirklich aus dem Raum entfernen?`)) return;
+    try {
+      await moderate(participant.identity, participant.role, action);
+      setCollaborationError("");
+    } catch (error) {
+      setCollaborationError(messageOf(error));
+    }
+  }
+
+  return <main className="meeting-canvas"><section className="meeting-grid">{tiles.length > 0 ? tiles.map((tile, index) => <ParticipantTile key={tile.key} name={tile.name} participant={tile.participant} track={tile.track} primary={index === 0} />) : <ParticipantTile name={fallbackName} primary />}<div className="invite-tile"><Users /><h3>{connected ? "Weitere Teilnehmer einladen" : "Medien verbinden"}</h3><p>{connected ? "Teilen Sie den Raumcode aus der Kopfleiste." : "Verbinden Sie zuerst den Medienserver über die Schaltfläche unten."}</p></div></section><aside className="meeting-side"><div className="side-tabs"><button className={sideTab === "participants" ? "active" : ""} onClick={() => setSideTab("participants")}>Teilnehmer</button><button className={sideTab === "chat" ? "active" : ""} onClick={() => setSideTab("chat")}><MessageSquare size={15} /> Chat</button></div>{sideTab === "participants" ? <div className="participants-panel">{participants.length > 0 ? participants.map((participant) => <div className="participant-row" key={participant.identity}><div className={`avatar ${participant.isSpeaking ? "speaking" : ""}`}>{participant.name.slice(0, 2).toUpperCase()}</div><div><b>{participant.name}</b><span>{participant.isLocal ? `Sie · ${roleLabel(participant.role)}` : roleLabel(participant.role)}</span></div><div className="participant-status">{participant.handRaised && <Hand className="hand-raised" size={17} />}{participant.microphoneMuted ? <MicOff size={16} /> : <Mic size={16} />}{!participant.isLocal && canModerateRole(localRole, participant.role) && <div className="moderation-actions"><button disabled={participant.microphoneMuted} title="Stummschalten" onClick={() => void moderateParticipant(participant, "mute")}><VolumeX size={15} /></button><button className="remove" title="Aus Raum entfernen" onClick={() => void moderateParticipant(participant, "remove")}><UserMinus size={15} /></button></div>}</div></div>) : <p className="side-empty">Noch nicht verbunden</p>}<button className={`raise-hand ${localHandRaised ? "active" : ""}`} disabled={!connected} onClick={() => void toggleHand()}><Hand /> {localHandRaised ? "Hand senken" : "Hand heben"}</button></div> : <div className="chat-panel"><div className="chat-messages">{messages.length > 0 ? messages.map((message) => <div className={`chat-message ${message.isLocal ? "local" : ""}`} key={message.id}><div><b>{message.senderName}</b><time>{new Date(message.sentAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.text}</p></div>) : <p className="side-empty">Noch keine Nachrichten</p>}</div><form className="chat-form" onSubmit={submitChat}><input value={chatText} onChange={(event) => setChatText(event.target.value)} placeholder="Nachricht schreiben …" maxLength={2000} disabled={!connected} /><button disabled={!connected || !chatText.trim()}><MessageSquare size={16} /> Senden</button></form></div>}{collaborationError && <div className="inline-error">{collaborationError}</div>}</aside></main>;
 }
 
 function BroadcastCanvas({ room, connected, fallbackName, grantedControl }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string; grantedControl: boolean }) {
