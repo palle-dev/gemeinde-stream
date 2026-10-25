@@ -345,6 +345,17 @@ input::placeholder { color: #5e6977; }
 .audio-program-placeholder { display: grid; justify-items: center; gap: 10px; color: var(--muted); }
 .audio-program-placeholder svg { width: 48px; height: 48px; color: var(--cyan); }
 .audio-program-placeholder b { color: white; }
+.talkback-panel { display: grid; gap: 6px; margin: 0 0 18px; padding: 10px; border: 1px solid #35d5cc3d; border-radius: 10px; background: #0b1518; }
+.talkback-panel > div:first-child, .talkback-panel > div:first-child > span { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.talkback-panel > div:first-child svg { width: 15px; color: var(--cyan); }
+.talkback-panel > div:first-child small { color: var(--lime); font-size: 9px; }
+.talkback-panel > button { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #151e27; color: #d3dce5; text-align: left; user-select: none; touch-action: none; }
+.talkback-panel > button > svg { width: 16px; color: var(--cyan); }
+.talkback-panel > button > span { display: grid; gap: 1px; }
+.talkback-panel > button small, .talkback-panel > p { color: var(--muted); font-size: 9px; }
+.talkback-panel > button.active { border-color: #ff5964; background: #3a1116; color: white; }
+.talkback-panel > button.active > svg, .talkback-panel > button.active small { color: #ff7d84; }
+.talkback-panel > p { margin: 3px 0; }
 .rail-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .rail-heading button { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: #1b232d; }
 .master-badge { padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; }
