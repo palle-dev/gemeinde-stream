@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { open, unlink, type FileHandle } from "node:fs/promises";
 import { join } from "node:path";
+import ffmpegStaticPath from "ffmpeg-static";
 
 interface RecordingFile {
   handle: FileHandle;
@@ -18,6 +19,12 @@ interface ActiveStream {
 }
 
 const activeStreams = new Map<number, ActiveStream>();
+
+export function resolveFfmpegPath(configuredPath = process.env.GEMEINDE_STREAM_FFMPEG, packaged = app.isPackaged): string {
+  if (configuredPath?.trim()) return configuredPath.trim();
+  if (!ffmpegStaticPath) return "ffmpeg";
+  return packaged ? ffmpegStaticPath.replace("app.asar", "app.asar.unpacked") : ffmpegStaticPath;
+}
 
 function streamTarget(serverUrl: string, streamKey: string): string {
   const parsed = new URL(serverUrl.trim());
@@ -87,7 +94,7 @@ ipcMain.handle("recording:cancel", async (event) => {
 ipcMain.handle("stream:begin", async (event, serverUrl: string, streamKey: string) => {
   if (activeStreams.has(event.sender.id)) throw new Error("Es läuft bereits eine Programmausspielung.");
   const target = streamTarget(serverUrl, streamKey);
-  const executable = process.env.GEMEINDE_STREAM_FFMPEG || "ffmpeg";
+  const executable = resolveFfmpegPath();
   const child = spawn(executable, [
     "-hide_banner", "-loglevel", "warning", "-f", "webm", "-i", "pipe:0",
     "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
