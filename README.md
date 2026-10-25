@@ -11,6 +11,8 @@ Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60
 
 Host, Co-Host und Operator können Quellenkombinationen als benannte Szenen speichern. Die Szenen liegen zentral in Base44, stehen der gesamten berechtigten Regie zur Verfügung und laden Layout sowie Kamera- oder Bildschirmquellen wieder in die Vorschau; erst `TAKE` schaltet sie sicher ins Programm.
 
+Die Regie kann Bauchbinden mit Titel und Unterzeile vorbereiten. Die Vorschau zeigt den Entwurf; `TAKE` schaltet Bild und Einblendung synchron auf allen Regieplätzen. Die Grafik wird auch in das saubere Ausgabefenster, lokale Aufnahmen und RTMP-Streams eingebrannt.
+
 Der Audiobereich der Live-Regie enthält einen echten lokalen Mixer für alle Remote-Mikrofone. Regie-Rollen sehen Live-Pegel, können Kanäle stummschalten und deren Wiedergabelautstärke für die Programmausgabe einstellen.
 
 Ein Live-Signalmonitor zeigt für jede Kamera- und Bildschirmquelle die tatsächlich empfangene Auflösung, Bildrate, Videobitrate und LiveKit-Verbindungsqualität. Eine Ampel warnt die Regie sofort, wenn eine Quelle unter 1080p50 fällt oder die Verbindung instabil wird.

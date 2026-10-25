@@ -15,6 +15,10 @@ const outputStyles = `
   .video-placeholder video { width: 100%; height: 100%; object-fit: cover; background: #000; }
   .avatar { width: 9vw; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: #1d3940; color: #d9fffb; font-size: 3vw; font-weight: 700; }
   .tile-label, .tile-hand { display: none; }
+  .program-overlay { position: absolute; z-index: 5; left: 3.75%; bottom: 6.85%; min-width: 22%; max-width: 78%; padding: 1.35% 2%; border-left: 10px solid #b8ff3d; background: rgba(8, 13, 18, .92); box-shadow: 0 12px 38px #0008; }
+  .program-overlay b, .program-overlay span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .program-overlay b { color: #fff; font-size: clamp(24px, 2.5vw, 48px); line-height: 1.08; }
+  .program-overlay span { margin-top: .55em; color: #b8c4cf; font-size: clamp(16px, 1.4vw, 27px); }
 `;
 
 export function ProgramOutputWindow({ open, children, onClosed, onError }: { open: boolean; children: ReactNode; onClosed: () => void; onError: (message: string) => void }) {

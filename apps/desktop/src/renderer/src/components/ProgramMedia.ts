@@ -54,6 +54,36 @@ export async function createProgramMediaSession(room: Room, snapshot: () => Prog
     context.fillStyle = "#d9fffb"; context.font = "600 44px Segoe UI"; context.textAlign = "center";
     context.fillText(source.name, x + width / 2, y + height / 2);
   };
+  const drawOverlay = (overlay: BroadcastProgramState["overlay"]) => {
+    if (!overlay?.title) return;
+    const x = 72;
+    const bottom = 74;
+    const paddingX = 34;
+    const titleSize = 48;
+    const subtitleSize = 27;
+    context.save();
+    context.font = `700 ${titleSize}px Segoe UI`;
+    const titleWidth = context.measureText(overlay.title).width;
+    context.font = `500 ${subtitleSize}px Segoe UI`;
+    const subtitleWidth = overlay.subtitle ? context.measureText(overlay.subtitle).width : 0;
+    const boxWidth = Math.min(1500, Math.max(430, Math.max(titleWidth, subtitleWidth) + paddingX * 2));
+    const boxHeight = overlay.subtitle ? 142 : 100;
+    const y = canvas.height - bottom - boxHeight;
+    context.fillStyle = "rgba(8, 13, 18, .92)";
+    context.fillRect(x, y, boxWidth, boxHeight);
+    context.fillStyle = "#b8ff3d";
+    context.fillRect(x, y, 10, boxHeight);
+    context.fillStyle = "#ffffff";
+    context.font = `700 ${titleSize}px Segoe UI`;
+    context.textAlign = "left";
+    context.fillText(overlay.title, x + paddingX, y + 60, boxWidth - paddingX * 2);
+    if (overlay.subtitle) {
+      context.fillStyle = "#b8c4cf";
+      context.font = `500 ${subtitleSize}px Segoe UI`;
+      context.fillText(overlay.subtitle, x + paddingX, y + 105, boxWidth - paddingX * 2);
+    }
+    context.restore();
+  };
   let frame = 0;
   const draw = () => {
     const current = snapshot();
@@ -66,6 +96,7 @@ export async function createProgramMediaSession(room: Room, snapshot: () => Prog
       drawSlot(active[0], 0, 0, 1920, 1080); drawSlot(active[1], 1286, 713, 576, 324);
       context.strokeStyle = "#fff"; context.lineWidth = 3; context.strokeRect(1286, 713, 576, 324);
     } else drawSlot(active[0], 0, 0, 1920, 1080);
+    drawOverlay(state?.overlay);
     frame = window.requestAnimationFrame(draw);
   };
   draw();
