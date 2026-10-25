@@ -130,7 +130,11 @@ function Start-LiveKit {
 
     $env:LIVEKIT_KEYS = "$($env:LIVEKIT_API_KEY): $($env:LIVEKIT_API_SECRET)`n"
     $process = Start-Process -FilePath $liveKitExe `
-        -ArgumentList @("--bind", "127.0.0.1") `
+        -ArgumentList @(
+            "--bind", "127.0.0.1",
+            "--node-ip", "127.0.0.1",
+            "--rtc.enable_loopback_candidate"
+        ) `
         -WorkingDirectory (Split-Path -Parent $liveKitExe) `
         -WindowStyle Hidden `
         -RedirectStandardOutput $stdoutLog `
