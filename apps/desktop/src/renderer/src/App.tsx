@@ -42,6 +42,7 @@ import {
   useMeetingModeration,
   type ParticipantRole,
 } from "./components/MeetingModeration";
+import { useRoomLifecycle } from "./components/RoomLifecycle";
 import {
   useBroadcastCoordination,
   type BroadcastLayout,
@@ -217,6 +218,10 @@ function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event:
   async function openMembership(member: MembershipRecord) {
     try {
       const room = unwrap(await base44.functions.invoke("get-room", { eventId: member.event_id }) as FunctionEnvelope<{ event: EventRecord }>);
+      if (room.event.status === "ended") {
+        setNotice("Diese Veranstaltung wurde bereits beendet.");
+        return;
+      }
       onOpen(room.event);
     } catch (error) {
       setNotice(messageOf(error));
@@ -258,7 +263,8 @@ function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event:
 }
 
 function RoomCard({ event, role, onOpen }: { event: EventRecord; role: string; onOpen: () => void }) {
-  return <article className="room-card"><div className={`mode-badge ${event.mode}`}><span />{event.mode === "meeting" ? "Meeting" : "Live-Produktion"}</div><h3>{event.title}</h3><p>{event.description || (event.mode === "meeting" ? "Interaktiver Raum für Gespräche und Bildschirmfreigabe" : "Regie, Quellen und Programmausgabe")}</p><div className="room-meta"><span><Users size={16} /> {role}</span>{event.starts_at && <span><CalendarDays size={16} /> {new Date(event.starts_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</span>}</div><button className="secondary full" onClick={onOpen}>Studio öffnen</button></article>;
+  const ended = event.status === "ended";
+  return <article className={`room-card ${ended ? "ended" : ""}`}><div className="card-badges"><div className={`mode-badge ${event.mode}`}><span />{event.mode === "meeting" ? "Meeting" : "Live-Produktion"}</div><div className={`status-badge ${event.status}`}>{event.status === "live" ? "LIVE" : ended ? "BEENDET" : "GEPLANT"}</div></div><h3>{event.title}</h3><p>{event.description || (event.mode === "meeting" ? "Interaktiver Raum für Gespräche und Bildschirmfreigabe" : "Regie, Quellen und Programmausgabe")}</p><div className="room-meta"><span><Users size={16} /> {role}</span>{event.starts_at && <span><CalendarDays size={16} /> {new Date(event.starts_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</span>}</div><button className="secondary full" onClick={onOpen} disabled={ended}>{ended ? "Veranstaltung beendet" : "Studio öffnen"}</button></article>;
 }
 
 function CreateRoom({ user, onClose, onCreated }: { user: UserInfo; onClose: () => void; onCreated: (event: EventRecord) => void }) {
@@ -340,6 +346,14 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
       setMic(preferences.microphoneEnabled);
       setCamera(preferences.cameraEnabled);
       setJoined(true);
+      if (credentials.role === "host" && event.status === "scheduled") {
+        try {
+          await base44.entities.Event.update(event.id, { status: "live" });
+        } catch {
+          setMediaMessage("Verbunden, Status konnte jedoch nicht aktualisiert werden");
+          return;
+        }
+      }
       setMediaMessage("Sicher mit dem Medienserver verbunden");
     } catch (error) {
       await media.disconnect();
@@ -392,9 +406,27 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
     window.alert("Sie wurden von der Moderation aus dem Raum entfernt.");
     onLeave();
   }, [onLeave]);
+  const handleRoomEnded = useCallback(() => {
+    window.alert("Der Host hat die Veranstaltung beendet.");
+    onLeave();
+  }, [onLeave]);
+  const { broadcastEnd } = useRoomLifecycle(media.room, connected, participantRole, handleRoomEnded);
+
+  async function endForAll() {
+    if (!window.confirm("Veranstaltung wirklich für alle beenden? Ein erneuter Beitritt ist danach nicht möglich.")) return;
+    try {
+      setMediaMessage("Veranstaltung wird beendet …");
+      await base44.entities.Event.update(event.id, { status: "ended" });
+      await broadcastEnd();
+      await media.disconnect();
+      onLeave();
+    } catch (error) {
+      setMediaMessage(messageOf(error));
+    }
+  }
   if (!joined) return <PreJoin title={event.title} mode={event.mode} initialName={user.full_name || user.email} defaultCameraOn={event.default_camera_on} defaultMicrophoneOn={event.default_microphone_on} busy={connection === "connecting"} error={connection === "error" ? mediaMessage : ""} onCancel={onLeave} onJoin={connect} />;
 
-  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} localRole={participantRole} onModerationMute={handleModerationMute} onModerationRemove={handleModerationRemove} /> : <BroadcastCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} grantedControl={canControlProgram} />}<footer className="control-bar"><div className="control-group"><button disabled={!connected} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={!connected} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={!connected} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button></div><button className="connect-button" disabled>{connected ? "Verbunden" : "Verbindung getrennt"}</button><button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></footer></div>;
+  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} localRole={participantRole} onModerationMute={handleModerationMute} onModerationRemove={handleModerationRemove} /> : <BroadcastCanvas room={media.room} connected={connected} fallbackName={user.full_name || user.email} grantedControl={canControlProgram} />}<footer className="control-bar"><div className="control-group"><button disabled={!connected} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={!connected} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={!connected} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button></div><button className="connect-button" disabled>{connected ? "Verbunden" : "Verbindung getrennt"}</button><div className="leave-actions">{participantRole === "host" && <button className="end-button" onClick={() => void endForAll()}>Für alle beenden</button>}<button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></div></footer></div>;
 }
 
 function MeetingCanvas({ room, connected, fallbackName, localRole, onModerationMute, onModerationRemove }: { room: MediaRoom["room"]; connected: boolean; fallbackName: string; localRole: ParticipantRole; onModerationMute: () => void; onModerationRemove: () => void }) {

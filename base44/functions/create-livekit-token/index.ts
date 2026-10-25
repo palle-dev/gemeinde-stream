@@ -10,6 +10,9 @@ Deno.serve(async (req) => {
     const { eventId, displayName } = await req.json();
     const event = await base44.asServiceRole.entities.Event.get(String(eventId ?? ""));
     if (!event) return Response.json({ error: "Raum nicht gefunden" }, { status: 404 });
+    if (event.status === "ended") {
+      return Response.json({ error: "Diese Veranstaltung wurde bereits beendet" }, { status: 409 });
+    }
 
     const memberships = await base44.asServiceRole.entities.RoomMember.filter({
       event_id: event.id,

@@ -11,6 +11,8 @@ Vor dem Beitritt steht ein Vorraum mit Kameravorschau, Anzeigename sowie Auswahl
 
 In Meetings sehen alle Teilnehmer ihre Rollen. Host, Co-Host und Operator können untergeordnete Rollen stummschalten oder aus dem Raum entfernen; Host und gleichrangige Moderatoren sind vor unzulässigen Eingriffen geschützt.
 
+Beim Beitritt des Hosts wechselt eine geplante Veranstaltung auf „Live“. Der Host kann sie anschließend verbindlich für alle beenden; verbundene Clients verlassen den Raum automatisch und ein erneuter Beitritt wird serverseitig verhindert.
+
 ## Projektstruktur
 
 - `apps/desktop` – Electron-, React- und LiveKit-Client
