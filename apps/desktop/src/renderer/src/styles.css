@@ -255,6 +255,15 @@ input::placeholder { color: #5e6977; }
 .audio-channel-controls input { width: 100%; padding: 0; accent-color: var(--lime); }
 .audio-channel-controls :disabled { opacity: .38; }
 .audio-mixer-empty { padding: 18px 8px; border: 1px dashed var(--line); border-radius: 9px; color: var(--muted); font-size: 10px; text-align: center; }
+.program-recorder { margin-top: 14px; }
+.program-recorder > button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 11px; border: 1px solid #ff676d55; border-radius: 9px; background: #2c1519; color: #ffb0b3; text-align: left; }
+.program-recorder > button.recording { border-color: #ff676d; background: #561a20; animation: recording-pulse 1.6s ease-in-out infinite; }
+.program-recorder > button:disabled { opacity: .4; }
+.program-recorder > button svg { flex: 0 0 auto; width: 20px; }
+.program-recorder > button span, .program-recorder > button b, .program-recorder > button small { display: block; }
+.program-recorder > button small { margin-top: 3px; color: #d58d91; font-size: 10px; }
+.recorder-error { display: block; margin-top: 7px; color: #ff8f93; font-size: 10px; }
+@keyframes recording-pulse { 50% { box-shadow: 0 0 0 3px #ff676d22; } }
 .output-window-button { width: 100%; display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 11px; border: 1px solid var(--line); border-radius: 9px; background: #161d26; color: #c9d2dc; text-align: left; }
 .output-window-button svg { flex: 0 0 auto; color: var(--cyan); }
 .output-window-button span, .output-window-button b, .output-window-button small { display: block; }

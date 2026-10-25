@@ -11,7 +11,7 @@ export function audioMeterPercent(level: number): number {
   return Math.round(Math.sqrt(normalizedVolume(level)) * 100);
 }
 
-export function BroadcastAudioMixer({ room, participants, enabled }: { room: Room; participants: ParticipantMedia[]; enabled: boolean }) {
+export function BroadcastAudioMixer({ room, participants, enabled, onMixChanged }: { room: Room; participants: ParticipantMedia[]; enabled: boolean; onMixChanged?: (volumes: Record<string, number>) => void }) {
   const remoteParticipants = participants.filter((participant) => !participant.isLocal);
   const [volumes, setVolumes] = useState<Record<string, number>>({});
   const previousVolumes = useRef<Record<string, number>>({});
@@ -22,6 +22,8 @@ export function BroadcastAudioMixer({ room, participants, enabled }: { room: Roo
       room.remoteParticipants.get(participant.identity)?.setVolume(volume, Track.Source.Microphone);
     }
   }, [remoteParticipants, room, volumes]);
+
+  useEffect(() => { onMixChanged?.(volumes); }, [onMixChanged, volumes]);
 
   function setVolume(identity: string, volume: number) {
     const next = normalizedVolume(volume);
