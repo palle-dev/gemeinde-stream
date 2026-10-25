@@ -13,10 +13,12 @@ import {
   Mic,
   MicOff,
   MonitorUp,
+  Pencil,
   Plus,
   Radio,
   Settings,
   ShieldCheck,
+  Trash2,
   Users,
   UserPlus,
   UserMinus,
@@ -47,6 +49,7 @@ import { useRoomRoleManagement, type AssignableRole } from "./components/RoomRol
 import { ProgramOutputWindow } from "./components/ProgramOutputWindow";
 import { DeviceSettings } from "./components/DeviceSettings";
 import { selectMeetingStage } from "./components/MeetingLayout";
+import { defaultStartTime, toDateTimeInput, toIsoDateTime } from "./components/EventScheduling";
 import { resolveSceneSourceIds, useBroadcastScenes, type AvailableSceneSource, type BroadcastScene } from "./components/BroadcastScenes";
 import { BroadcastAudioMixer } from "./components/BroadcastAudioMixer";
 import { ProgramRecorder } from "./components/ProgramRecorder";
@@ -190,6 +193,7 @@ function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event:
   const [memberships, setMemberships] = useState<MembershipRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventRecord | null>(null);
   const [joinCode, setJoinCode] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -239,6 +243,17 @@ function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event:
     }
   }
 
+  async function deleteOwnedEvent(event: EventRecord) {
+    if (!window.confirm(`Veranstaltung „${event.title}“ wirklich löschen? Zugehörige Einladungen und Szenen werden ebenfalls entfernt.`)) return;
+    try {
+      await base44.functions.invoke("manage-event", { eventId: event.id, action: "delete" });
+      setOwned((current) => current.filter((item) => item.id !== event.id));
+      setNotice("");
+    } catch (error) {
+      setNotice(messageOf(error));
+    }
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -262,58 +277,74 @@ function Dashboard({ user, onOpen, onLogout }: { user: UserInfo; onOpen: (event:
         <div className="room-grid">
           {loading && <div className="empty-card">Räume werden geladen …</div>}
           {!loading && owned.length === 0 && memberships.length === 0 && <div className="empty-card"><div className="icon-box"><CalendarDays /></div><h3>Noch keine Veranstaltung</h3><p>Erstellen Sie ein Meeting oder eine Live-Produktion.</p><button className="secondary" onClick={() => setShowCreate(true)}>Jetzt erstellen</button></div>}
-          {owned.map((event) => <RoomCard key={event.id} event={event} role="Host" onOpen={() => onOpen(event)} />)}
+          {owned.map((event) => <RoomCard key={event.id} event={event} role="Host" onOpen={() => onOpen(event)} onEdit={() => setEditingEvent(event)} onDelete={() => void deleteOwnedEvent(event)} />)}
           {memberships.filter((member) => !owned.some((event) => event.id === member.event_id)).map((member) => (
             <RoomCard key={member.id} event={{ id: member.event_id, title: member.event_title, mode: member.event_mode, status: "scheduled", host_email: "", join_code: "", livekit_room_name: "" }} role={member.role} onOpen={() => void openMembership(member)} />
           ))}
         </div>
       </main>
-      {showCreate && <CreateRoom user={user} onClose={() => setShowCreate(false)} onCreated={(event) => { setShowCreate(false); setOwned((current) => [event, ...current]); onOpen(event); }} />}
+      {showCreate && <CreateRoom user={user} onClose={() => setShowCreate(false)} onCreated={(event) => { setShowCreate(false); setOwned((current) => [event, ...current]); }} />}
+      {editingEvent && <EditRoom event={editingEvent} onClose={() => setEditingEvent(null)} onUpdated={(updated) => { setEditingEvent(null); setOwned((current) => current.map((event) => event.id === updated.id ? updated : event)); }} />}
     </div>
   );
 }
 
-function RoomCard({ event, role, onOpen }: { event: EventRecord; role: string; onOpen: () => void }) {
+function RoomCard({ event, role, onOpen, onEdit, onDelete }: { event: EventRecord; role: string; onOpen: () => void; onEdit?: () => void; onDelete?: () => void }) {
   const ended = event.status === "ended";
-  return <article className={`room-card ${ended ? "ended" : ""}`}><div className="card-badges"><div className={`mode-badge ${event.mode}`}><span />{event.mode === "meeting" ? "Meeting" : "Live-Produktion"}</div><div className={`status-badge ${event.status}`}>{event.status === "live" ? "LIVE" : ended ? "BEENDET" : "GEPLANT"}</div></div><h3>{event.title}</h3><p>{event.description || (event.mode === "meeting" ? "Interaktiver Raum für Gespräche und Bildschirmfreigabe" : "Regie, Quellen und Programmausgabe")}</p><div className="room-meta"><span><Users size={16} /> {role}</span>{event.starts_at && <span><CalendarDays size={16} /> {new Date(event.starts_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</span>}</div><button className="secondary full" onClick={onOpen} disabled={ended}>{ended ? "Veranstaltung beendet" : "Studio öffnen"}</button></article>;
+  return <article className={`room-card ${ended ? "ended" : ""}`}><div className="card-badges"><div className={`mode-badge ${event.mode}`}><span />{event.mode === "meeting" ? "Meeting" : "Live-Produktion"}</div><div className={`status-badge ${event.status}`}>{event.status === "live" ? "LIVE" : ended ? "BEENDET" : "GEPLANT"}</div></div><h3>{event.title}</h3><p>{event.description || (event.mode === "meeting" ? "Interaktiver Raum für Gespräche und Bildschirmfreigabe" : "Regie, Quellen und Programmausgabe")}</p><div className="room-meta"><span><Users size={16} /> {role}{event.max_participants ? ` · max. ${event.max_participants}` : ""}</span>{event.starts_at && <span><CalendarDays size={16} /> {new Date(event.starts_at).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</span>}</div><div className="room-card-actions"><button className="secondary full" onClick={onOpen} disabled={ended}>{ended ? "Veranstaltung beendet" : "Studio öffnen"}</button>{onEdit && <button className="room-icon-action" title="Bearbeiten" onClick={onEdit} disabled={event.status === "live"}><Pencil /></button>}{onDelete && <button className="room-icon-action delete" title="Löschen" onClick={onDelete} disabled={event.status === "live"}><Trash2 /></button>}</div></article>;
+}
+
+function EventDetailsFields({ title, setTitle, description, setDescription, startsAt, setStartsAt, maxParticipants, setMaxParticipants, defaultCameraOn, setDefaultCameraOn, defaultMicrophoneOn, setDefaultMicrophoneOn }: { title: string; setTitle: (value: string) => void; description: string; setDescription: (value: string) => void; startsAt: string; setStartsAt: (value: string) => void; maxParticipants: number; setMaxParticipants: (value: number) => void; defaultCameraOn: boolean; setDefaultCameraOn: (value: boolean) => void; defaultMicrophoneOn: boolean; setDefaultMicrophoneOn: (value: boolean) => void }) {
+  return <div className="event-fields"><label>Titel<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="z. B. Sonntagsgottesdienst" maxLength={120} required autoFocus /></label><label>Beschreibung<textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Thema, Ablauf oder Hinweise für Teilnehmende" maxLength={1000} rows={3} /></label><div className="event-field-row"><label>Startzeit<input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required /></label><label>Teilnehmerlimit<input type="number" value={maxParticipants} onChange={(event) => setMaxParticipants(Number(event.target.value))} min={2} max={500} required /></label></div><div className="event-defaults"><label><input type="checkbox" checked={defaultCameraOn} onChange={(event) => setDefaultCameraOn(event.target.checked)} /> Kamera beim Beitritt einschalten</label><label><input type="checkbox" checked={defaultMicrophoneOn} onChange={(event) => setDefaultMicrophoneOn(event.target.checked)} /> Mikrofon beim Beitritt einschalten</label></div></div>;
 }
 
 function CreateRoom({ user, onClose, onCreated }: { user: UserInfo; onClose: () => void; onCreated: (event: EventRecord) => void }) {
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [mode, setMode] = useState<RoomMode>("meeting");
+  const [startsAt, setStartsAt] = useState(() => defaultStartTime());
+  const [maxParticipants, setMaxParticipants] = useState(50);
+  const [defaultCameraOn, setDefaultCameraOn] = useState(true);
+  const [defaultMicrophoneOn, setDefaultMicrophoneOn] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
+    event.preventDefault(); setBusy(true); setError("");
     try {
       const created = await base44.entities.Event.create({
-        title,
-        description: mode === "meeting" ? "Interaktives Online-Meeting" : "Live-Produktion",
-        mode,
-        status: "scheduled",
-        host_email: user.email,
-        join_code: createJoinCode(),
-        livekit_room_name: createLiveKitRoomName(),
-        max_participants: 50,
-        default_camera_on: true,
-        default_microphone_on: true,
-        recording_enabled: false,
-        streaming_enabled: mode === "broadcast",
+        title: title.trim(), description: description.trim() || (mode === "meeting" ? "Interaktives Online-Meeting" : "Live-Produktion"), mode, status: "scheduled",
+        starts_at: toIsoDateTime(startsAt), host_email: user.email, join_code: createJoinCode(), livekit_room_name: createLiveKitRoomName(),
+        max_participants: maxParticipants, default_camera_on: defaultCameraOn, default_microphone_on: defaultMicrophoneOn,
+        recording_enabled: false, streaming_enabled: mode === "broadcast",
       }) as EventRecord;
       onCreated(created);
-    } catch (cause) {
-      setError(messageOf(cause));
-    } finally {
-      setBusy(false);
-    }
+    } catch (cause) { setError(messageOf(cause)); } finally { setBusy(false); }
   }
 
-  return <div className="modal-backdrop"><form className="modal" onSubmit={submit}><span className="eyebrow">NEUER RAUM</span><h2>Was möchten Sie durchführen?</h2><div className="mode-picker"><button type="button" className={mode === "meeting" ? "selected" : ""} onClick={() => setMode("meeting")}><Users /><b>Meeting</b><span>Alle sprechen, Video und Bildschirm teilen</span></button><button type="button" className={mode === "broadcast" ? "selected" : ""} onClick={() => setMode("broadcast")}><Radio /><b>Live-Produktion</b><span>Master-Regie, Quellen und Programmausgabe</span></button></div><label>Titel<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Sonntagsgottesdienst" required autoFocus /></label>{error && <div className="error-banner">{error}</div>}<div className="modal-actions"><button type="button" className="ghost" onClick={onClose}>Abbrechen</button><button className="primary" disabled={busy}>{busy ? "Wird erstellt …" : "Raum erstellen"}</button></div></form></div>;
+  return <div className="modal-backdrop"><form className="modal event-modal" onSubmit={submit}><span className="eyebrow">NEUE VERANSTALTUNG</span><h2>Was möchten Sie planen?</h2><div className="mode-picker"><button type="button" className={mode === "meeting" ? "selected" : ""} onClick={() => setMode("meeting")}><Users /><b>Meeting</b><span>Alle sprechen, Video und Bildschirm teilen</span></button><button type="button" className={mode === "broadcast" ? "selected" : ""} onClick={() => setMode("broadcast")}><Radio /><b>Live-Produktion</b><span>Master-Regie, Quellen und Programmausgabe</span></button></div><EventDetailsFields title={title} setTitle={setTitle} description={description} setDescription={setDescription} startsAt={startsAt} setStartsAt={setStartsAt} maxParticipants={maxParticipants} setMaxParticipants={setMaxParticipants} defaultCameraOn={defaultCameraOn} setDefaultCameraOn={setDefaultCameraOn} defaultMicrophoneOn={defaultMicrophoneOn} setDefaultMicrophoneOn={setDefaultMicrophoneOn} />{error && <div className="error-banner">{error}</div>}<div className="modal-actions"><button type="button" className="ghost" onClick={onClose}>Abbrechen</button><button className="primary" disabled={busy}>{busy ? "Wird erstellt …" : "Veranstaltung planen"}</button></div></form></div>;
 }
 
+function EditRoom({ event, onClose, onUpdated }: { event: EventRecord; onClose: () => void; onUpdated: (event: EventRecord) => void }) {
+  const [title, setTitle] = useState(event.title);
+  const [description, setDescription] = useState(event.description || "");
+  const [startsAt, setStartsAt] = useState(toDateTimeInput(event.starts_at) || defaultStartTime());
+  const [maxParticipants, setMaxParticipants] = useState(event.max_participants || 50);
+  const [defaultCameraOn, setDefaultCameraOn] = useState(event.default_camera_on ?? true);
+  const [defaultMicrophoneOn, setDefaultMicrophoneOn] = useState(event.default_microphone_on ?? true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(formEvent: React.FormEvent) {
+    formEvent.preventDefault(); setBusy(true); setError("");
+    try {
+      const result = unwrap(await base44.functions.invoke("manage-event", { eventId: event.id, action: "update", title, description, startsAt: toIsoDateTime(startsAt), maxParticipants, defaultCameraOn, defaultMicrophoneOn }) as FunctionEnvelope<{ event: EventRecord }>);
+      onUpdated(result.event);
+    } catch (cause) { setError(messageOf(cause)); } finally { setBusy(false); }
+  }
+
+  return <div className="modal-backdrop"><form className="modal event-modal" onSubmit={submit}><span className="eyebrow">VERANSTALTUNG BEARBEITEN</span><h2>{event.mode === "meeting" ? "Meeting planen" : "Live-Produktion planen"}</h2><EventDetailsFields title={title} setTitle={setTitle} description={description} setDescription={setDescription} startsAt={startsAt} setStartsAt={setStartsAt} maxParticipants={maxParticipants} setMaxParticipants={setMaxParticipants} defaultCameraOn={defaultCameraOn} setDefaultCameraOn={setDefaultCameraOn} defaultMicrophoneOn={defaultMicrophoneOn} setDefaultMicrophoneOn={setDefaultMicrophoneOn} />{error && <div className="error-banner">{error}</div>}<div className="modal-actions"><button type="button" className="ghost" onClick={onClose}>Abbrechen</button><button className="primary" disabled={busy}>{busy ? "Wird gespeichert …" : "Änderungen speichern"}</button></div></form></div>;
+}
 function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; onLeave: () => void }) {
   const [connection, setConnection] = useState<ConnectionState>("idle");
   const [mediaMessage, setMediaMessage] = useState("Medienserver noch nicht verbunden");

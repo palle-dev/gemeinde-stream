@@ -5,6 +5,8 @@ Windows-Anwendung und Base44-Backend für zwei Betriebsarten:
 - **Meeting:** interaktive Räume mit Kamera, Mikrofon und Bildschirmfreigabe
 - **Broadcast:** rollenbasierte Master-Regie mit Vorschau, synchronisiertem Programmbild, Szenen und Remote-Quellen
 
+Hosts können Veranstaltungen mit Beschreibung, Startzeit, Teilnehmerlimit sowie Kamera- und Mikrofonvorgaben planen. Geplante und beendete Veranstaltungen lassen sich später bearbeiten oder vollständig löschen; das Backend bereinigt dabei zugehörige Mitgliedschaften und Szenen.
+
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.

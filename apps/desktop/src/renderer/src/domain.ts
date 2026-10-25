@@ -19,6 +19,7 @@ export interface EventRecord {
   livekit_room_name: string;
   default_camera_on?: boolean;
   default_microphone_on?: boolean;
+  max_participants?: number;
   created_date?: string;
 }
 
