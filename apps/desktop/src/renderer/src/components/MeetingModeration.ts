@@ -6,7 +6,7 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 export type ParticipantRole = "host" | "cohost" | "operator" | "speaker" | "participant" | "viewer";
-export type ModerationAction = "mute" | "remove";
+export type ModerationAction = "mute" | "camera_off" | "remove";
 
 interface ModerationMessage {
   type: "moderation";
@@ -47,6 +47,7 @@ export function useMeetingModeration(
   localRole: ParticipantRole,
   onMuted: () => void,
   onRemoved: () => void,
+  onCameraDisabled?: () => void,
 ) {
   useEffect(() => {
     if (!connected) return;
@@ -64,6 +65,9 @@ export function useMeetingModeration(
         if (message.action === "mute") {
           await room.localParticipant.setMicrophoneEnabled(false);
           onMuted();
+        } else if (message.action === "camera_off") {
+          await room.localParticipant.setCameraEnabled(false);
+          onCameraDisabled?.();
         } else if (message.action === "remove") {
           await room.disconnect();
           onRemoved();
@@ -74,7 +78,7 @@ export function useMeetingModeration(
     };
     room.on(RoomEvent.DataReceived, receive);
     return () => { room.off(RoomEvent.DataReceived, receive); };
-  }, [connected, localRole, onMuted, onRemoved, room]);
+  }, [connected, localRole, onCameraDisabled, onMuted, onRemoved, room]);
 
   const moderate = useCallback(async (targetIdentity: string, targetRole: ParticipantRole, action: ModerationAction) => {
     if (!canModerateRole(localRole, targetRole)) throw new Error("Sie haben keine Berechtigung für diese Person.");

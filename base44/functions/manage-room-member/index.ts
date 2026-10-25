@@ -1,6 +1,7 @@
 import { createClientFromRequest } from "npm:@base44/sdk";
 
 const assignableRoles = ["cohost", "operator", "speaker", "participant", "viewer"];
+const roleRank: Record<string, number> = { host: 3, cohost: 2, operator: 2, speaker: 1, participant: 1, viewer: 1 };
 
 Deno.serve(async (req) => {
   try {
@@ -13,7 +14,7 @@ Deno.serve(async (req) => {
     const action = String(body.action ?? "assign");
     const participantIdentity = String(body.participantIdentity ?? "");
     const role = String(body.role ?? "");
-    if (!eventId || !["assign", "list", "invite", "remove", "admit", "reject"].includes(action)) {
+    if (!eventId || !["assign", "list", "invite", "remove", "admit", "reject", "block"].includes(action)) {
       return Response.json({ error: "Ungültige Mitgliederanfrage" }, { status: 400 });
     }
 
@@ -66,8 +67,29 @@ Deno.serve(async (req) => {
       const member = memberId ? await base44.asServiceRole.entities.RoomMember.get(memberId) : null;
       if (!member || member.event_id !== event.id) return Response.json({ error: "Mitglied nicht gefunden" }, { status: 404 });
       if (member.user_email === event.host_email) return Response.json({ error: "Der Host kann nicht entfernt werden" }, { status: 409 });
+      if (user.role !== "admin" && roleRank[String(actorRole)] <= roleRank[String(member.role)]) {
+        return Response.json({ error: "Dieses Mitglied darf nicht entfernt werden" }, { status: 403 });
+      }
       await base44.asServiceRole.entities.RoomMember.delete(member.id);
       return Response.json({ removed: true });
+    }
+
+    if (action === "block") {
+      if (!participantIdentity) return Response.json({ error: "Teilnehmer fehlt" }, { status: 400 });
+      const matches = await base44.asServiceRole.entities.RoomMember.filter({
+        event_id: event.id,
+        participant_identity: participantIdentity,
+      });
+      const member = matches[0];
+      if (!member) return Response.json({ error: "Teilnehmer wurde nicht gefunden" }, { status: 404 });
+      if (member.user_email === event.host_email || roleRank[String(actorRole)] <= roleRank[String(member.role)]) {
+        return Response.json({ error: "Diese Person darf nicht entfernt werden" }, { status: 403 });
+      }
+      const updated = await base44.asServiceRole.entities.RoomMember.update(member.id, {
+        status: "blocked",
+        last_seen_at: new Date().toISOString(),
+      });
+      return Response.json({ member: updated });
     }
 
     if (action === "admit" || action === "reject") {

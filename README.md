@@ -13,6 +13,8 @@ Meetings können mit einem Warteraum geschützt werden. Nicht vorab eingeladene 
 
 Während eines laufenden Meetings kann der Host den Raum zusätzlich sperren und wieder öffnen. Bei aktiver Sperre werden neue Personen bereits am Raumcode abgewiesen, während eingeladene oder zuvor zugelassene Teilnehmer ihre Verbindung wiederherstellen können.
 
+Host, Co-Host und Operator können bei niedriger eingestuften Teilnehmern Mikrofon oder Kamera ausschalten. Entfernte Personen werden zusätzlich serverseitig blockiert und können dem Raum nicht erneut beitreten; Host und gleichrangige Moderatoren sind durch eine Backend-Prüfung geschützt.
+
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.

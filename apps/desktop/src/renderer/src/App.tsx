@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { RoomEvent, Track } from "livekit-client";
 import {
   ArrowLeft,
   CalendarDays,
@@ -375,6 +376,25 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
     return () => { void media.disconnect(); };
   }, [media]);
 
+  useEffect(() => {
+    const syncLocalMedia = () => {
+      const microphone = media.room.localParticipant.getTrackPublication(Track.Source.Microphone);
+      const camera = media.room.localParticipant.getTrackPublication(Track.Source.Camera);
+      setMic(Boolean(microphone && !microphone.isMuted));
+      setCamera(Boolean(camera && !camera.isMuted));
+    };
+    media.room.on(RoomEvent.LocalTrackPublished, syncLocalMedia);
+    media.room.on(RoomEvent.LocalTrackUnpublished, syncLocalMedia);
+    media.room.on(RoomEvent.TrackMuted, syncLocalMedia);
+    media.room.on(RoomEvent.TrackUnmuted, syncLocalMedia);
+    return () => {
+      media.room.off(RoomEvent.LocalTrackPublished, syncLocalMedia);
+      media.room.off(RoomEvent.LocalTrackUnpublished, syncLocalMedia);
+      media.room.off(RoomEvent.TrackMuted, syncLocalMedia);
+      media.room.off(RoomEvent.TrackUnmuted, syncLocalMedia);
+    };
+  }, [media]);
+
   async function connect(preferences: MediaPreferences) {
     setMediaMessage("Zugang wird angefordert …");
     try {
@@ -552,9 +572,12 @@ function MeetingCanvas({ eventId, title, room, connected, fallbackName, localRol
     }
   }
 
-  async function moderateParticipant(participant: ParticipantMedia, action: "mute" | "remove") {
+  async function moderateParticipant(participant: ParticipantMedia, action: "mute" | "camera_off" | "remove") {
     if (action === "remove" && !window.confirm(`${participant.name} wirklich aus dem Raum entfernen?`)) return;
     try {
+      if (action === "remove") {
+        await base44.functions.invoke("manage-room-member", { eventId, action: "block", participantIdentity: participant.identity });
+      }
       await moderate(participant.identity, participant.role, action);
       setCollaborationError("");
     } catch (error) {
@@ -573,7 +596,7 @@ function MeetingCanvas({ eventId, title, room, connected, fallbackName, localRol
 
   const canRecord = connected && ["host", "cohost", "operator"].includes(localRole);
   const recordingSources = tiles.map((tile) => ({ id: tile.key, identity: tile.participant.identity, name: tile.participant.name, track: tile.track, isScreenShare: tile.isScreenShare, isSpeaking: tile.isSpeaking }));
-  return <main className="meeting-canvas"><MeetingVideoArea tiles={tiles} connected={connected} fallbackName={fallbackName} view={view} onViewChange={setView} /><aside className="meeting-side"><WaitingRoomControls eventId={eventId} enabled={connected && ["host", "cohost", "operator"].includes(localRole)} /><div className="side-tabs"><button className={sideTab === "participants" ? "active" : ""} onClick={() => setSideTab("participants")}>Teilnehmer</button><button className={sideTab === "chat" ? "active" : ""} onClick={() => setSideTab("chat")}><MessageSquare size={15} /> Chat</button></div>{sideTab === "participants" ? <div className="participants-panel">{participants.length > 0 ? participants.map((participant) => <div className="participant-row" key={participant.identity}><div className={`avatar ${participant.isSpeaking ? "speaking" : ""}`}>{participant.name.slice(0, 2).toUpperCase()}</div><div><b>{participant.name}</b>{localRole === "host" && !participant.isLocal && participant.role !== "host" ? <select className="role-select" value={participant.role} onChange={(event) => void changeRole(participant, event.target.value as AssignableRole)}><option value="cohost">Co-Host</option><option value="operator">Operator</option><option value="speaker">Sprecher</option><option value="participant">Teilnehmer</option><option value="viewer">Zuschauer</option></select> : <span>{participant.isLocal ? `Sie · ${roleLabel(participant.role)}` : roleLabel(participant.role)}</span>}</div><div className="participant-status">{participant.handRaised && <Hand className="hand-raised" size={17} />}{participant.microphoneMuted ? <MicOff size={16} /> : <Mic size={16} />}{!participant.isLocal && canModerateRole(localRole, participant.role) && <div className="moderation-actions"><button disabled={participant.microphoneMuted} title="Stummschalten" onClick={() => void moderateParticipant(participant, "mute")}><VolumeX size={15} /></button><button className="remove" title="Aus Raum entfernen" onClick={() => void moderateParticipant(participant, "remove")}><UserMinus size={15} /></button></div>}</div></div>) : <p className="side-empty">Noch nicht verbunden</p>}<button className={`raise-hand ${localHandRaised ? "active" : ""}`} disabled={!connected} onClick={() => void toggleHand()}><Hand /> {localHandRaised ? "Hand senken" : "Hand heben"}</button></div> : <div className="chat-panel"><div className="chat-messages">{messages.length > 0 ? messages.map((message) => <div className={`chat-message ${message.isLocal ? "local" : ""}`} key={message.id}><div><b>{message.senderName}</b><time>{new Date(message.sentAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.text}</p></div>) : <p className="side-empty">Noch keine Nachrichten</p>}</div><form className="chat-form" onSubmit={submitChat}><input value={chatText} onChange={(event) => setChatText(event.target.value)} placeholder="Nachricht schreiben …" maxLength={2000} disabled={!connected} /><button disabled={!connected || !chatText.trim()}><MessageSquare size={16} /> Senden</button></form></div>}{collaborationError && <div className="inline-error">{collaborationError}</div>}<MeetingRecorder room={room} title={title} layout={view} sources={recordingSources} enabled={canRecord} /></aside></main>;
+  return <main className="meeting-canvas"><MeetingVideoArea tiles={tiles} connected={connected} fallbackName={fallbackName} view={view} onViewChange={setView} /><aside className="meeting-side"><WaitingRoomControls eventId={eventId} enabled={connected && ["host", "cohost", "operator"].includes(localRole)} /><div className="side-tabs"><button className={sideTab === "participants" ? "active" : ""} onClick={() => setSideTab("participants")}>Teilnehmer</button><button className={sideTab === "chat" ? "active" : ""} onClick={() => setSideTab("chat")}><MessageSquare size={15} /> Chat</button></div>{sideTab === "participants" ? <div className="participants-panel">{participants.length > 0 ? participants.map((participant) => <div className="participant-row" key={participant.identity}><div className={`avatar ${participant.isSpeaking ? "speaking" : ""}`}>{participant.name.slice(0, 2).toUpperCase()}</div><div><b>{participant.name}</b>{localRole === "host" && !participant.isLocal && participant.role !== "host" ? <select className="role-select" value={participant.role} onChange={(event) => void changeRole(participant, event.target.value as AssignableRole)}><option value="cohost">Co-Host</option><option value="operator">Operator</option><option value="speaker">Sprecher</option><option value="participant">Teilnehmer</option><option value="viewer">Zuschauer</option></select> : <span>{participant.isLocal ? `Sie · ${roleLabel(participant.role)}` : roleLabel(participant.role)}</span>}</div><div className="participant-status">{participant.handRaised && <Hand className="hand-raised" size={17} />}{participant.microphoneMuted ? <MicOff size={16} /> : <Mic size={16} />}{!participant.isLocal && canModerateRole(localRole, participant.role) && <div className="moderation-actions"><button disabled={participant.microphoneMuted} title="Stummschalten" onClick={() => void moderateParticipant(participant, "mute")}><VolumeX size={15} /></button><button disabled={!participant.cameraTrack} title="Kamera ausschalten" onClick={() => void moderateParticipant(participant, "camera_off")}><CameraOff size={15} /></button><button className="remove" title="Dauerhaft aus Raum entfernen" onClick={() => void moderateParticipant(participant, "remove")}><UserMinus size={15} /></button></div>}</div></div>) : <p className="side-empty">Noch nicht verbunden</p>}<button className={`raise-hand ${localHandRaised ? "active" : ""}`} disabled={!connected} onClick={() => void toggleHand()}><Hand /> {localHandRaised ? "Hand senken" : "Hand heben"}</button></div> : <div className="chat-panel"><div className="chat-messages">{messages.length > 0 ? messages.map((message) => <div className={`chat-message ${message.isLocal ? "local" : ""}`} key={message.id}><div><b>{message.senderName}</b><time>{new Date(message.sentAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.text}</p></div>) : <p className="side-empty">Noch keine Nachrichten</p>}</div><form className="chat-form" onSubmit={submitChat}><input value={chatText} onChange={(event) => setChatText(event.target.value)} placeholder="Nachricht schreiben …" maxLength={2000} disabled={!connected} /><button disabled={!connected || !chatText.trim()}><MessageSquare size={16} /> Senden</button></form></div>}{collaborationError && <div className="inline-error">{collaborationError}</div>}<MeetingRecorder room={room} title={title} layout={view} sources={recordingSources} enabled={canRecord} /></aside></main>;
 }
 
 interface MeetingVideoTile {
