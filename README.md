@@ -7,13 +7,13 @@ Windows-Anwendung und Base44-Backend für zwei Betriebsarten:
 
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
-Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.
+Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.
 
 Host, Co-Host und Operator können Quellenkombinationen als benannte Szenen speichern. Die Szenen liegen zentral in Base44, stehen der gesamten berechtigten Regie zur Verfügung und laden Layout sowie Kamera- oder Bildschirmquellen wieder in die Vorschau; erst `TAKE` schaltet sie sicher ins Programm.
 
 Der Audiobereich der Live-Regie enthält einen echten lokalen Mixer für alle Remote-Mikrofone. Regie-Rollen sehen Live-Pegel, können Kanäle stummschalten und deren Wiedergabelautstärke für die Programmausgabe einstellen.
 
-Das geschaltete Programm lässt sich direkt aus der Regie als 1080p-WebM-Datei aufnehmen. Die lokale Aufzeichnung folgt allen TAKE- und Layoutwechseln, mischt die verbundenen Mikrofonspuren und schreibt die Daten fortlaufend an den gewählten Speicherort, damit lange Gottesdienste nicht vollständig im Arbeitsspeicher gehalten werden.
+Das geschaltete Programm lässt sich direkt aus der Regie als 1080p60-WebM-Datei mit 12 Mbit/s aufnehmen. Die lokale Aufzeichnung folgt allen TAKE- und Layoutwechseln, mischt die verbundenen Mikrofonspuren und schreibt die Daten fortlaufend an den gewählten Speicherort, damit lange Gottesdienste nicht vollständig im Arbeitsspeicher gehalten werden.
 
 Vor dem Beitritt steht ein Vorraum mit Kameravorschau, Anzeigename sowie Auswahl von Kamera, Mikrofon und Lautsprecher bereit. Die persönlichen Geräte- und Ein/Aus-Einstellungen werden lokal für den nächsten Raum gespeichert.
 

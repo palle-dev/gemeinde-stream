@@ -3,6 +3,7 @@ import { CircleStop, Disc3 } from "lucide-react";
 import { Room, Track } from "livekit-client";
 import type { VideoMediaTrack } from "./RoomMedia";
 import type { BroadcastProgramState } from "./BroadcastCoordination";
+import { PROGRAM_FRAME_RATE, PROGRAM_HEIGHT, PROGRAM_WIDTH } from "../lib/room";
 
 export interface ProgramRecordingSource {
   id: string;
@@ -79,8 +80,8 @@ export function ProgramRecorder({ room, title, programState, sources, audioMix, 
 
     try {
       const canvas = document.createElement("canvas");
-      canvas.width = 1920;
-      canvas.height = 1080;
+      canvas.width = PROGRAM_WIDTH;
+      canvas.height = PROGRAM_HEIGHT;
       const context = canvas.getContext("2d", { alpha: false });
       if (!context) throw new Error("Die 1080p-Zeichenfläche konnte nicht erstellt werden.");
 
@@ -136,7 +137,7 @@ export function ProgramRecorder({ room, title, programState, sources, audioMix, 
       };
       draw();
 
-      const canvasStream = canvas.captureStream(30);
+      const canvasStream = canvas.captureStream(PROGRAM_FRAME_RATE);
       const audioContext = new AudioContext();
       await audioContext.resume();
       const audioDestination = audioContext.createMediaStreamDestination();
@@ -171,7 +172,7 @@ export function ProgramRecorder({ room, title, programState, sources, audioMix, 
       syncAudioTracks();
       const combined = new MediaStream([...canvasStream.getVideoTracks(), ...audioDestination.stream.getAudioTracks()]);
       const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((type) => MediaRecorder.isTypeSupported(type));
-      const recorder = new MediaRecorder(combined, mimeType ? { mimeType, videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 192_000 } : undefined);
+      const recorder = new MediaRecorder(combined, mimeType ? { mimeType, videoBitsPerSecond: 12_000_000, audioBitsPerSecond: 192_000 } : undefined);
       recorderRef.current = recorder;
       writeQueueRef.current = Promise.resolve();
       recorder.addEventListener("dataavailable", (event) => {
@@ -233,5 +234,5 @@ export function ProgramRecorder({ room, title, programState, sources, audioMix, 
   }
 
   const recording = status === "recording";
-  return <div className="program-recorder"><button className={recording ? "recording" : ""} disabled={!enabled || !programState || status === "saving"} onClick={() => recording ? void stop() : void start()}>{recording ? <CircleStop /> : <Disc3 />}<span><b>{recording ? "Aufnahme stoppen" : status === "saving" ? "Wird gespeichert …" : "Programm aufnehmen"}</b><small>{recording ? formatElapsed(elapsed) : "1080p · Video und Audio"}</small></span></button>{error && <small className="recorder-error">{error}</small>}</div>;
+  return <div className="program-recorder"><button className={recording ? "recording" : ""} disabled={!enabled || !programState || status === "saving"} onClick={() => recording ? void stop() : void start()}>{recording ? <CircleStop /> : <Disc3 />}<span><b>{recording ? "Aufnahme stoppen" : status === "saving" ? "Wird gespeichert …" : "Programm aufnehmen"}</b><small>{recording ? formatElapsed(elapsed) : "1080p60 · Video und Audio"}</small></span></button>{error && <small className="recorder-error">{error}</small>}</div>;
 }
