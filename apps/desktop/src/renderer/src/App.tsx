@@ -7,6 +7,8 @@ import {
   Check,
   Clipboard,
   Hand,
+  Lock,
+  LockOpen,
   LogOut,
   MailCheck,
   MessageSquare,
@@ -323,6 +325,7 @@ function CreateRoom({ user, onClose, onCreated }: { user: UserInfo; onClose: () 
         starts_at: toIsoDateTime(startsAt), host_email: user.email, join_code: createJoinCode(), livekit_room_name: createLiveKitRoomName(),
         max_participants: maxParticipants, default_camera_on: defaultCameraOn, default_microphone_on: defaultMicrophoneOn,
         waiting_room_enabled: mode === "meeting" && waitingRoomEnabled,
+        meeting_locked: false,
         recording_enabled: false, streaming_enabled: mode === "broadcast",
       }) as EventRecord;
       onCreated(created);
@@ -365,6 +368,7 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
   const [joined, setJoined] = useState(false);
   const [deviceSettingsOpen, setDeviceSettingsOpen] = useState(false);
   const [waitingPreferences, setWaitingPreferences] = useState<MediaPreferences | null>(null);
+  const [meetingLocked, setMeetingLocked] = useState(event.meeting_locked ?? false);
   const media = useMemo(() => new MediaRoom(setConnection), []);
 
   useEffect(() => {
@@ -474,6 +478,18 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
     await notifyRoleChange(targetIdentity, role);
   }
 
+  async function toggleMeetingLock() {
+    const next = !meetingLocked;
+    try {
+      setMediaMessage(next ? "Meeting wird gesperrt …" : "Meeting wird geöffnet …");
+      await base44.functions.invoke("manage-event", { eventId: event.id, action: next ? "lock" : "unlock" });
+      setMeetingLocked(next);
+      setMediaMessage(next ? "Meeting gesperrt – keine neuen Personen" : "Meeting geöffnet");
+    } catch (error) {
+      setMediaMessage(messageOf(error));
+    }
+  }
+
   async function endForAll() {
     if (!window.confirm("Veranstaltung wirklich für alle beenden? Ein erneuter Beitritt ist danach nicht möglich.")) return;
     try {
@@ -496,7 +512,7 @@ function Studio({ event, user, onLeave }: { event: EventRecord; user: UserInfo; 
   if (!joined) return <PreJoin title={event.title} mode={event.mode} initialName={user.full_name || user.email} defaultCameraOn={event.default_camera_on} defaultMicrophoneOn={event.default_microphone_on} busy={connection === "connecting"} error={connection === "error" ? mediaMessage : ""} onCancel={onLeave} onJoin={connect} />;
 
   const mediaDisabled = !connected || participantRole === "viewer";
-  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><DeviceSettings room={media.room} open={deviceSettingsOpen} onClose={() => setDeviceSettingsOpen(false)} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas eventId={event.id} title={event.title} room={media.room} connected={connected} fallbackName={user.full_name || user.email} localRole={participantRole} onModerationMute={handleModerationMute} onModerationRemove={handleModerationRemove} onAssignRole={assignRole} /> : <BroadcastCanvas eventId={event.id} eventTitle={event.title} room={media.room} connected={connected} fallbackName={user.full_name || user.email} grantedControl={canControlProgram} localRole={participantRole} onAssignRole={assignRole} />}<footer className="control-bar"><div className="control-group"><button disabled={mediaDisabled} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={mediaDisabled} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={mediaDisabled} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button><button disabled={!connected} className={deviceSettingsOpen ? "active" : ""} onClick={() => setDeviceSettingsOpen(true)}><Settings /><span>Geräte</span></button></div><button className="connect-button" disabled>{connected ? roleLabel(participantRole) : "Verbindung getrennt"}</button><div className="leave-actions">{participantRole === "host" && <button className="end-button" onClick={() => void endForAll()}>Für alle beenden</button>}<button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></div></footer></div>;
+  return <div className="studio-shell"><RoomAudio room={media.room} connected={connected} /><DeviceSettings room={media.room} open={deviceSettingsOpen} onClose={() => setDeviceSettingsOpen(false)} /><header className="studio-header"><div className="studio-title"><button className="icon-button" onClick={() => void leave()}><ArrowLeft /></button><div><span>{event.mode === "meeting" ? "MEETING" : "LIVE-PRODUKTION"}</span><h1>{event.title}</h1></div></div><div className={`connection ${connection}`} >{connected ? <Wifi /> : <WifiOff />}<span>{mediaMessage}</span></div><div className="code-pill"><small>Raumcode</small><b>{event.join_code}</b><button onClick={() => void copyCode()}>{copied ? <Check /> : <Clipboard />}</button></div></header>{event.mode === "meeting" ? <MeetingCanvas eventId={event.id} title={event.title} room={media.room} connected={connected} fallbackName={user.full_name || user.email} localRole={participantRole} onModerationMute={handleModerationMute} onModerationRemove={handleModerationRemove} onAssignRole={assignRole} /> : <BroadcastCanvas eventId={event.id} eventTitle={event.title} room={media.room} connected={connected} fallbackName={user.full_name || user.email} grantedControl={canControlProgram} localRole={participantRole} onAssignRole={assignRole} />}<footer className="control-bar"><div className="control-group"><button disabled={mediaDisabled} className={mic ? "active" : ""} onClick={() => void toggleMic()}>{mic ? <Mic /> : <MicOff />}<span>{mic ? "Mikrofon an" : "Mikrofon aus"}</span></button><button disabled={mediaDisabled} className={camera ? "active" : ""} onClick={() => void toggleCamera()}>{camera ? <Camera /> : <CameraOff />}<span>{camera ? "Kamera an" : "Kamera aus"}</span></button><button disabled={mediaDisabled} className={sharing ? "active" : ""} onClick={() => void toggleSharing()}><MonitorUp /><span>Teilen</span></button><button disabled={!connected} className={deviceSettingsOpen ? "active" : ""} onClick={() => setDeviceSettingsOpen(true)}><Settings /><span>Geräte</span></button></div><button className="connect-button" disabled>{connected ? roleLabel(participantRole) : "Verbindung getrennt"}</button><div className="leave-actions">{event.mode === "meeting" && participantRole === "host" && <button className={`lock-button ${meetingLocked ? "active" : ""}`} onClick={() => void toggleMeetingLock()}>{meetingLocked ? <LockOpen /> : <Lock />}{meetingLocked ? "Öffnen" : "Sperren"}</button>}{participantRole === "host" && <button className="end-button" onClick={() => void endForAll()}>Für alle beenden</button>}<button className="leave-button" onClick={() => void leave()}>Raum verlassen</button></div></footer></div>;
 }
 
 function MeetingCanvas({ eventId, title, room, connected, fallbackName, localRole, onModerationMute, onModerationRemove, onAssignRole }: { eventId: string; title: string; room: MediaRoom["room"]; connected: boolean; fallbackName: string; localRole: ParticipantRole; onModerationMute: () => void; onModerationRemove: () => void; onAssignRole: (identity: string, role: AssignableRole) => Promise<void> }) {

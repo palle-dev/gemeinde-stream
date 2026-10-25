@@ -26,9 +26,12 @@ Deno.serve(async (req) => {
     if (existing[0]?.status === "blocked") {
       return Response.json({ error: "Der Host hat den Beitritt zu diesem Raum abgelehnt" }, { status: 403 });
     }
+    const previouslyApproved = existing[0]?.status === "invited" || existing[0]?.status === "joined";
+    if (event.mode === "meeting" && event.meeting_locked === true && !previouslyApproved && event.host_email !== user.email && user.role !== "admin") {
+      return Response.json({ error: "Dieses Meeting wurde vom Host gesperrt" }, { status: 423 });
+    }
 
     const assignedRole = existing[0]?.role ?? (event.mode === "meeting" ? "participant" : "speaker");
-    const previouslyApproved = existing[0]?.status === "invited" || existing[0]?.status === "joined";
     const waitingForApproval = event.mode === "meeting" && event.waiting_room_enabled === true && !previouslyApproved;
     const canPublish = assignedRole !== "viewer";
     const memberData = {

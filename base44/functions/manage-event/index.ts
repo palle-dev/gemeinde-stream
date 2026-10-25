@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const eventId = String(body.eventId ?? "");
     const action = String(body.action ?? "");
-    if (!eventId || !["update", "delete"].includes(action)) {
+    if (!eventId || !["update", "delete", "lock", "unlock"].includes(action)) {
       return Response.json({ error: "Ungültige Veranstaltungsanfrage" }, { status: 400 });
     }
 
@@ -17,6 +17,14 @@ Deno.serve(async (req) => {
     if (!event) return Response.json({ error: "Veranstaltung nicht gefunden" }, { status: 404 });
     if (event.host_email !== user.email && user.role !== "admin") {
       return Response.json({ error: "Nur der Host darf diese Veranstaltung verwalten" }, { status: 403 });
+    }
+
+    if (action === "lock" || action === "unlock") {
+      if (event.mode !== "meeting" || event.status === "ended") {
+        return Response.json({ error: "Nur ein aktives Meeting kann gesperrt werden" }, { status: 409 });
+      }
+      const updated = await base44.asServiceRole.entities.Event.update(event.id, { meeting_locked: action === "lock" });
+      return Response.json({ event: updated });
     }
 
     if (action === "delete") {

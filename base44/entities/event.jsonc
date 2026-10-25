@@ -15,6 +15,7 @@
     "default_camera_on": { "type": "boolean", "default": true },
     "default_microphone_on": { "type": "boolean", "default": true },
     "waiting_room_enabled": { "type": "boolean", "default": true },
+    "meeting_locked": { "type": "boolean", "default": false },
     "recording_enabled": { "type": "boolean", "default": false },
     "streaming_enabled": { "type": "boolean", "default": false }
   },

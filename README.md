@@ -11,6 +11,8 @@ Teilnehmer können vorab per E-Mail-Adresse als Co-Host, Operator, Sprecher, Tei
 
 Meetings können mit einem Warteraum geschützt werden. Nicht vorab eingeladene Personen bleiben dort ohne Medienzugriff, bis Host, Co-Host oder Operator sie zulassen; abgelehnte Zugänge werden für die Veranstaltung gesperrt. Eingeladene Personen gelangen weiterhin direkt in den Raum.
 
+Während eines laufenden Meetings kann der Host den Raum zusätzlich sperren und wieder öffnen. Bei aktiver Sperre werden neue Personen bereits am Raumcode abgewiesen, während eingeladene oder zuvor zugelassene Teilnehmer ihre Verbindung wiederherstellen können.
+
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.

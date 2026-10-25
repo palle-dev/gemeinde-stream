@@ -20,6 +20,7 @@ export interface EventRecord {
   default_camera_on?: boolean;
   default_microphone_on?: boolean;
   waiting_room_enabled?: boolean;
+  meeting_locked?: boolean;
   max_participants?: number;
   created_date?: string;
 }

@@ -430,6 +430,9 @@ input::placeholder { color: #5e6977; }
 .connect-button:disabled { opacity: .65; }
 .leave-button { justify-self: end; border: 1px solid #ff5d6355; background: #2c1519; color: #ff8589; border-radius: 10px; padding: 12px 18px; }
 .leave-actions { justify-self: end; display: flex; gap: 8px; }
+.lock-button { display: flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid #ffd16655; border-radius: 8px; background: #2a2417; color: #ffd166; font-weight: 700; }
+.lock-button.active { border-color: #b8ff3d55; background: #1b2818; color: var(--lime); }
+.lock-button svg { width: 16px; }
 .end-button { border: 1px solid #ff5d6388; background: #591b22; color: #ffb0b3; border-radius: 10px; padding: 12px 15px; font-weight: 750; }
 .audio-renderers { position: fixed; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
 @media (max-width: 1200px) { .login-shell { grid-template-columns: 1fr 1fr; }.login-copy { padding: 7vw 5vw; }.quick-actions { grid-template-columns: 1fr; }.join-card { grid-template-columns: auto 1fr; }.join-card input, .join-card button { grid-column: span 1; }.broadcast-canvas { grid-template-columns: 230px 1fr; }.meter-panel { display: none; } }
