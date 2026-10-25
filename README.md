@@ -23,6 +23,8 @@ Die Regie kann dasselbe Programmsignal außerdem direkt per RTMP oder RTMPS mit 
 
 Vor dem Beitritt steht ein Vorraum mit Kameravorschau, Anzeigename sowie Auswahl von Kamera, Mikrofon und Lautsprecher bereit. Die persönlichen Geräte- und Ein/Aus-Einstellungen werden lokal für den nächsten Raum gespeichert.
 
+Kamera, Mikrofon und Lautsprecher lassen sich auch während eines Meetings oder einer Live-Produktion über die Geräteeinstellungen wechseln. Neu angeschlossene Geräte werden erkannt, und die aktuelle Auswahl wird ohne Verlassen des Raums auf die laufenden LiveKit-Tracks angewendet.
+
 In Meetings sehen alle Teilnehmer ihre Rollen. Host, Co-Host und Operator können untergeordnete Rollen stummschalten oder aus dem Raum entfernen; Host und gleichrangige Moderatoren sind vor unzulässigen Eingriffen geschützt.
 
 Der Host kann verbundene Teilnehmer im Meeting und in der Live-Regie zu Co-Host, Operator, Sprecher, Teilnehmer oder Zuschauer ernennen. Die Änderung wird im Backend gespeichert; der betroffene Client trennt sich automatisch und erhält beim erneuten Beitritt ein LiveKit-Token mit den neuen Rechten. Zuschauer können weder Kamera, Mikrofon noch Bildschirm veröffentlichen.

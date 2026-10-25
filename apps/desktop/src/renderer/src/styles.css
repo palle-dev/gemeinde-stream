@@ -125,6 +125,25 @@ input::placeholder { color: #5e6977; }
 .mode-picker button span { color: var(--muted); line-height: 1.4; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .modal-actions .primary { width: auto; }
+.device-modal-backdrop { z-index: 40; }
+.device-modal { width: min(560px, 100%); padding: 24px; border: 1px solid #303a47; border-radius: 16px; background: #111820; box-shadow: 0 30px 100px #000; }
+.device-modal-heading, .device-modal-heading > div, .device-modal-heading > div > span { display: flex; align-items: center; }
+.device-modal-heading { justify-content: space-between; margin-bottom: 24px; }
+.device-modal-heading > div { gap: 12px; }
+.device-modal-heading > div > svg { color: var(--lime); }
+.device-modal-heading > div > span { align-items: flex-start; flex-direction: column; gap: 3px; }
+.device-modal-heading b, .device-modal-heading small { display: block; }
+.device-modal-heading b { font-size: 17px; }
+.device-modal-heading small { color: var(--muted); font-size: 11px; }
+.device-selectors { display: grid; gap: 14px; }
+.device-selectors label { display: grid; gap: 7px; }
+.device-selectors label > span { display: flex; align-items: center; gap: 7px; color: #c6d0da; font-size: 12px; font-weight: 700; }
+.device-selectors label > span svg { width: 16px; color: var(--cyan); }
+.device-selectors label > span small { margin-left: auto; color: var(--lime); font-size: 9px; font-weight: 600; }
+.device-selectors select { width: 100%; }
+.device-modal-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; }
+.device-modal-actions button { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.device-modal-actions button svg { width: 16px; }
 .studio-shell { height: 100vh; display: grid; grid-template-rows: 74px 1fr 88px; overflow: hidden; }
 .studio-header { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 20px; padding: 0 22px; background: #0d1218; border-bottom: 1px solid var(--line); }
 .studio-title { display: flex; gap: 14px; align-items: center; }
