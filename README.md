@@ -10,6 +10,8 @@ Windows-Anwendung und Base44-Backend für zwei Betriebsarten:
 - `apps/desktop` – Electron-, React- und LiveKit-Client
 - `base44/entities` – Räume, Mitgliedschaften, Geräte, Szenen und Organisationen
 - `base44/functions` – sicherer Raumbeitritt, Raumabfrage und LiveKit-Tokenausgabe
+- `infra/livekit` – Anleitung für den selbst gehosteten Produktionsserver
+- `.github/workflows` – automatische Prüfungen, Windows-Builds und Releases
 
 ## Lokaler Start
 
@@ -26,6 +28,8 @@ npm test
 npm run build
 ```
 
+Bei jedem Push auf `main` führt GitHub dieselben Prüfungen auf einem Windows-Runner aus und stellt den Installer 14 Tage als Build-Artefakt bereit. Ein Tag wie `v0.2.0` erzeugt zusätzlich ein dauerhaftes GitHub-Release, sofern Tag und Paketversion übereinstimmen.
+
 ## LiveKit konfigurieren
 
 Der Base44-Funktion `create-livekit-token` müssen folgende Secrets bereitgestellt werden:
@@ -35,6 +39,8 @@ Der Base44-Funktion `create-livekit-token` müssen folgende Secrets bereitgestel
 - `LIVEKIT_API_SECRET`
 
 Danach erzeugt ausschließlich das Base44-Backend kurzlebige, rollenbasierte Raumtokens. Der API-Secret wird nie an die Windows-Anwendung ausgeliefert.
+
+Die produktive Einrichtung mit öffentlicher Domain, TLS und TURN ist unter [`infra/livekit`](infra/livekit/README.md) dokumentiert.
 
 ## Sicherheitsmodell
 

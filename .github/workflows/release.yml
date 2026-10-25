@@ -1,0 +1,51 @@
+name: Windows-Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Quellcode auschecken
+        uses: actions/checkout@v7
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Prüfen und Installer bauen
+        run: |
+          npm run typecheck
+          npm test
+          npm run dist:win
+
+      - name: Versionsnummer prüfen
+        shell: pwsh
+        run: |
+          $packageVersion = node -p "require('./apps/desktop/package.json').version"
+          if ($env:GITHUB_REF_NAME -ne "v$packageVersion") {
+            throw "Tag $env:GITHUB_REF_NAME passt nicht zur App-Version $packageVersion."
+          }
+
+      - name: GitHub-Release veröffentlichen
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = node -p "require('./apps/desktop/package.json').version"
+          $installer = "apps/desktop/release/Gemeinde Stream Setup $version.exe"
+          gh release create $env:GITHUB_REF_NAME $installer --generate-notes --title "Gemeinde Stream $version"
+

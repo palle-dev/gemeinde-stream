@@ -1,0 +1,6 @@
+# Vom offiziellen LiveKit-Generator erzeugte Konfigurationen enthalten Schlüssel.
+generated/
+.env
+*.pem
+*.key
+
