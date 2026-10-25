@@ -17,6 +17,8 @@ Ein Live-Signalmonitor zeigt für jede Kamera- und Bildschirmquelle die tatsäch
 
 Das geschaltete Programm lässt sich direkt aus der Regie als 1080p60-WebM-Datei mit 12 Mbit/s aufnehmen. Die lokale Aufzeichnung folgt allen TAKE- und Layoutwechseln, mischt die verbundenen Mikrofonspuren und schreibt die Daten fortlaufend an den gewählten Speicherort, damit lange Gottesdienste nicht vollständig im Arbeitsspeicher gehalten werden.
 
+Die Regie kann dasselbe Programmsignal außerdem direkt per RTMP oder RTMPS mit 1080p60, H.264/AAC und 8 Mbit/s an YouTube, Facebook oder einen eigenen Streaming-Server senden. Serveradresse und Stream-Schlüssel werden nur lokal an den Electron-Hauptprozess übergeben und nicht gespeichert. Dafür muss `ffmpeg` unter Windows im `PATH` liegen; alternativ kann `GEMEINDE_STREAM_FFMPEG` auf den vollständigen Pfad zu `ffmpeg.exe` gesetzt werden.
+
 Vor dem Beitritt steht ein Vorraum mit Kameravorschau, Anzeigename sowie Auswahl von Kamera, Mikrofon und Lautsprecher bereit. Die persönlichen Geräte- und Ein/Aus-Einstellungen werden lokal für den nächsten Raum gespeichert.
 
 In Meetings sehen alle Teilnehmer ihre Rollen. Host, Co-Host und Operator können untergeordnete Rollen stummschalten oder aus dem Raum entfernen; Host und gleichrangige Moderatoren sind vor unzulässigen Eingriffen geschützt.

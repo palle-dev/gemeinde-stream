@@ -285,6 +285,19 @@ input::placeholder { color: #5e6977; }
 .program-recorder > button small { margin-top: 3px; color: #d58d91; font-size: 10px; }
 .recorder-error { display: block; margin-top: 7px; color: #ff8f93; font-size: 10px; }
 @keyframes recording-pulse { 50% { box-shadow: 0 0 0 3px #ff676d22; } }
+.program-streamer { display: grid; gap: 8px; margin-top: 14px; padding: 11px; border: 1px solid var(--line); border-radius: 9px; background: #111820; }
+.program-streamer.streaming { border-color: #ff676d66; background: #261419; }
+.streamer-heading { display: flex; justify-content: space-between; align-items: center; }
+.streamer-heading > small { color: #ff8589; font-size: 9px; font-weight: 800; letter-spacing: .06em; }
+.program-streamer label { display: grid; gap: 4px; color: var(--muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.program-streamer input { min-width: 0; width: 100%; padding: 8px; border-radius: 7px; font-size: 10px; text-transform: none; letter-spacing: normal; }
+.program-streamer > button { width: 100%; display: flex; align-items: center; gap: 9px; padding: 10px; border: 1px solid #35d5cc55; border-radius: 8px; background: #10272a; color: #aef5ef; text-align: left; }
+.program-streamer > button.stop-stream { border-color: #ff676d77; background: #501b21; color: #ffb0b3; }
+.program-streamer > button:disabled { opacity: .42; }
+.program-streamer > button svg { flex: 0 0 auto; width: 19px; }
+.program-streamer > button span, .program-streamer > button b, .program-streamer > button small { display: block; }
+.program-streamer > button small { margin-top: 3px; color: var(--muted); font-size: 9px; }
+.streamer-error { color: #ff8f93; font-size: 10px; line-height: 1.35; }
 .output-window-button { width: 100%; display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 11px; border: 1px solid var(--line); border-radius: 9px; background: #161d26; color: #c9d2dc; text-align: left; }
 .output-window-button svg { flex: 0 0 auto; color: var(--cyan); }
 .output-window-button span, .output-window-button b, .output-window-button small { display: block; }
