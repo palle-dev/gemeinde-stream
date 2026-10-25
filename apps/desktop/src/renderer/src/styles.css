@@ -95,6 +95,34 @@ input::placeholder { color: #5e6977; }
 .health-meter { height: 4px; background: #212936; margin: 18px 0 12px; border-radius: 9px; overflow: hidden; }
 .health-meter span { display: block; width: 62%; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--lime)); }
 .health-meter.ready span { width: 100%; }
+.management-page { display: grid; gap: 24px; }
+.management-page > header h1 { margin: 5px 0; font-size: 30px; }
+.management-page > header p { color: var(--muted); }
+.management-empty { padding: 50px; color: var(--muted); text-align: center; }
+.organization-create, .team-invite, .settings-grid { padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: #111820; }
+.organization-create { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 12px; }
+.organization-create label, .team-invite label, .settings-grid label { display: grid; gap: 7px; color: #c6d0da; font-size: 12px; font-weight: 700; }
+.team-invite { display: grid; grid-template-columns: 1fr 1.4fr 180px auto; align-items: end; gap: 10px; }
+.management-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.management-columns > section { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #10171f; }
+.management-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.management-heading svg { width: 18px; color: var(--lime); }
+.management-heading span { margin-left: auto; color: var(--muted); }
+.team-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 130px auto; align-items: center; gap: 9px; padding: 10px 0; border-top: 1px solid var(--line); }
+.team-row > div:nth-child(2), .device-row > div:nth-child(2) { min-width: 0; display: grid; gap: 3px; }
+.team-row small, .device-row small, .device-row span { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.team-row > button, .device-row > button { padding: 7px; border: 1px solid var(--line); border-radius: 7px; background: #19212b; color: #ff8589; }
+.team-row > button svg, .device-row > button svg { width: 14px; }
+.device-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
+.device-row.disabled { opacity: .55; }
+.device-state { width: 9px; height: 9px; border-radius: 50%; background: #65717d; }
+.device-state.online { background: var(--lime); box-shadow: 0 0 9px #b8ff3d88; }
+.device-state.recent { background: #ffc85c; }
+.device-row > button { color: #c6d0da; font-size: 10px; }
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.settings-grid .wide { grid-column: 1 / -1; }
+.settings-toggles { display: flex; flex-wrap: wrap; gap: 18px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+.settings-toggles label { display: flex; align-items: center; gap: 8px; }
 .section-heading { display: flex; justify-content: space-between; align-items: center; }
 .section-heading h2 { font-size: 22px; }
 .section-heading span { color: var(--muted); }

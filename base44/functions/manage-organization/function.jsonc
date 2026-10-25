@@ -1,0 +1,4 @@
+{
+  "name": "manage-organization",
+  "entry": "index.ts"
+}

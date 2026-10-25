@@ -67,6 +67,7 @@ import { RundownPanel } from "./components/RundownPanel";
 import { MediaLibrary, useMediaLibrary, type LocalMediaAsset } from "./components/MediaLibrary";
 import { broadcastTallyState } from "./components/BroadcastTally";
 import { BroadcastTalkback } from "./components/BroadcastTalkback";
+import { OrganizationAdmin } from "./components/OrganizationAdmin";
 import {
   normalizeBroadcastOverlay,
   useBroadcastCoordination,
@@ -214,6 +215,7 @@ function Dashboard({ user, onOpen, onLogout, initialJoinCode, onJoinCodeConsumed
   const [invitingEvent, setInvitingEvent] = useState<EventRecord | null>(null);
   const [joinCode, setJoinCode] = useState("");
   const [notice, setNotice] = useState("");
+  const [view, setView] = useState<"events" | "studio" | "team" | "settings">("events");
 
   async function reload() {
     setLoading(true);
@@ -283,34 +285,37 @@ function Dashboard({ user, onOpen, onLogout, initialJoinCode, onJoinCodeConsumed
     }
   }
 
+  const visibleOwned = view === "studio" ? owned.filter((event) => event.mode === "broadcast") : owned;
+  const visibleMemberships = view === "studio" ? memberships.filter((member) => member.event_mode === "broadcast") : memberships;
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="logo-lockup"><div className="brand-mark small"><Radio /></div><div><b>Gemeinde Stream</b><small>Studio</small></div></div>
         <nav>
-          <button className="nav-active"><CalendarDays /> Veranstaltungen</button>
-          <button><Video /> Studio</button>
-          <button><Users /> Team</button>
-          <button><Settings /> Einstellungen</button>
+          <button className={view === "events" ? "nav-active" : ""} onClick={() => setView("events")}><CalendarDays /> Veranstaltungen</button>
+          <button className={view === "studio" ? "nav-active" : ""} onClick={() => setView("studio")}><Video /> Studio</button>
+          <button className={view === "team" ? "nav-active" : ""} onClick={() => setView("team")}><Users /> Team</button>
+          <button className={view === "settings" ? "nav-active" : ""} onClick={() => setView("settings")}><Settings /> Einstellungen</button>
         </nav>
         <div className="user-card"><div className="avatar">{(user.full_name || user.email).slice(0, 2).toUpperCase()}</div><div><b>{user.full_name || "Administrator"}</b><small>{user.email}</small></div><button onClick={onLogout} title="Abmelden"><LogOut /></button></div>
       </aside>
       <main className="dashboard">
-        <header><div><span className="eyebrow">ÜBERSICHT</span><h1>Ihre Veranstaltungen</h1><p>Meetings durchführen oder eine komplette Live-Produktion steuern.</p></div><button className="primary compact" onClick={() => setShowCreate(true)}><Plus /> Neue Veranstaltung</button></header>
+        {view === "team" ? <OrganizationAdmin user={user} mode="team" /> : view === "settings" ? <OrganizationAdmin user={user} mode="settings" /> : <><header><div><span className="eyebrow">{view === "studio" ? "LIVE-REGIE" : "ÜBERSICHT"}</span><h1>{view === "studio" ? "Ihre Produktionen" : "Ihre Veranstaltungen"}</h1><p>{view === "studio" ? "Geplante und laufende Gottesdienst-Produktionen öffnen." : "Meetings durchführen oder eine komplette Live-Produktion steuern."}</p></div><button className="primary compact" onClick={() => setShowCreate(true)}><Plus /> Neue Veranstaltung</button></header>
         {notice && <div className="error-banner">{notice}</div>}
         <section className="quick-actions">
           <form className="join-card" onSubmit={joinRoom}><div className="icon-box"><Users /></div><div><b>Einem Raum beitreten</b><span>Meeting- oder Produktionscode eingeben</span></div><input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="RAUMCODE" maxLength={12} required /><button className="secondary">Beitreten</button></form>
           <div className="health-card"><div className="health-top"><span><Wifi /> Systemstatus</span><b>Backend verbunden</b></div><div className="health-meter ready"><span /></div><small>Base44 ist erreichbar. Medienserver und Geräte werden beim Beitritt geprüft.</small></div>
         </section>
-        <section className="section-heading"><h2>Geplant und zuletzt verwendet</h2><span>{owned.length + memberships.filter((member) => !owned.some((event) => event.id === member.event_id)).length} Räume</span></section>
+        <section className="section-heading"><h2>Geplant und zuletzt verwendet</h2><span>{visibleOwned.length + visibleMemberships.filter((member) => !owned.some((event) => event.id === member.event_id)).length} Räume</span></section>
         <div className="room-grid">
           {loading && <div className="empty-card">Räume werden geladen …</div>}
-          {!loading && owned.length === 0 && memberships.length === 0 && <div className="empty-card"><div className="icon-box"><CalendarDays /></div><h3>Noch keine Veranstaltung</h3><p>Erstellen Sie ein Meeting oder eine Live-Produktion.</p><button className="secondary" onClick={() => setShowCreate(true)}>Jetzt erstellen</button></div>}
-          {owned.map((event) => <RoomCard key={event.id} event={event} role="Host" onOpen={() => onOpen(event)} onInvite={() => setInvitingEvent(event)} onEdit={() => setEditingEvent(event)} onDelete={() => void deleteOwnedEvent(event)} />)}
-          {memberships.filter((member) => !owned.some((event) => event.id === member.event_id)).map((member) => (
+          {!loading && visibleOwned.length === 0 && visibleMemberships.length === 0 && <div className="empty-card"><div className="icon-box"><CalendarDays /></div><h3>{view === "studio" ? "Noch keine Produktion" : "Noch keine Veranstaltung"}</h3><p>Erstellen Sie ein Meeting oder eine Live-Produktion.</p><button className="secondary" onClick={() => setShowCreate(true)}>Jetzt erstellen</button></div>}
+          {visibleOwned.map((event) => <RoomCard key={event.id} event={event} role="Host" onOpen={() => onOpen(event)} onInvite={() => setInvitingEvent(event)} onEdit={() => setEditingEvent(event)} onDelete={() => void deleteOwnedEvent(event)} />)}
+          {visibleMemberships.filter((member) => !owned.some((event) => event.id === member.event_id)).map((member) => (
             <RoomCard key={member.id} event={{ id: member.event_id, title: member.event_title, mode: member.event_mode, status: "scheduled", host_email: "", join_code: "", livekit_room_name: "" }} role={member.role} onOpen={() => void openMembership(member)} />
           ))}
-        </div>
+        </div></>}
       </main>
       {showCreate && <CreateRoom user={user} onClose={() => setShowCreate(false)} onCreated={(event) => { setShowCreate(false); setOwned((current) => [event, ...current]); }} />}
       {editingEvent && <EditRoom event={editingEvent} onClose={() => setEditingEvent(null)} onUpdated={(updated) => { setEditingEvent(null); setOwned((current) => current.map((event) => event.id === updated.id ? updated : event)); }} />}
@@ -339,6 +344,17 @@ function CreateRoom({ user, onClose, onCreated }: { user: UserInfo; onClose: () 
   const [waitingRoomEnabled, setWaitingRoomEnabled] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    base44.functions.invoke("manage-organization", { action: "get" }).then((response) => {
+      const result = unwrap(response as FunctionEnvelope<{ organization?: { default_max_participants?: number; default_camera_on?: boolean; default_microphone_on?: boolean; default_waiting_room_enabled?: boolean } }>);
+      if (!result.organization) return;
+      setMaxParticipants(result.organization.default_max_participants ?? 50);
+      setDefaultCameraOn(result.organization.default_camera_on ?? true);
+      setDefaultMicrophoneOn(result.organization.default_microphone_on ?? true);
+      setWaitingRoomEnabled(result.organization.default_waiting_room_enabled ?? true);
+    }).catch(() => undefined);
+  }, []);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError("");

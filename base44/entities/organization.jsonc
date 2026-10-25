@@ -5,7 +5,12 @@
     "name": { "type": "string", "description": "Name der Gemeinde oder Organisation" },
     "slug": { "type": "string", "description": "Kurzer eindeutiger Bezeichner" },
     "owner_email": { "type": "string", "format": "email" },
-    "status": { "type": "string", "enum": ["active", "archived"], "default": "active" }
+    "status": { "type": "string", "enum": ["active", "archived"], "default": "active" },
+    "default_max_participants": { "type": "integer", "minimum": 2, "maximum": 500, "default": 50 },
+    "default_camera_on": { "type": "boolean", "default": true },
+    "default_microphone_on": { "type": "boolean", "default": true },
+    "default_waiting_room_enabled": { "type": "boolean", "default": true },
+    "default_stream_server": { "type": "string", "maxLength": 500 }
   },
   "required": ["name", "slug", "owner_email"],
   "rls": {

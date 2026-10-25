@@ -2,14 +2,17 @@
   "name": "Device",
   "type": "object",
   "properties": {
+    "organization_id": { "type": "string" },
+    "device_id": { "type": "string" },
     "user_email": { "type": "string", "format": "email" },
     "label": { "type": "string" },
     "platform": { "type": "string", "enum": ["windows"], "default": "windows" },
     "app_version": { "type": "string" },
     "last_seen_at": { "type": "string", "format": "date-time" },
-    "capabilities": { "type": "array", "items": { "type": "string" } }
+    "capabilities": { "type": "array", "items": { "type": "string" } },
+    "status": { "type": "string", "enum": ["online", "offline", "disabled"], "default": "online" }
   },
-  "required": ["user_email", "label"],
+  "required": ["device_id", "user_email", "label"],
   "rls": {
     "create": { "data.user_email": "{{user.email}}" },
     "read": { "$or": [{ "data.user_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
