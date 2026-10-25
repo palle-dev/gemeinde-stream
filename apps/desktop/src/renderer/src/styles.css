@@ -231,6 +231,15 @@ input::placeholder { color: #5e6977; }
 .scene span { color: var(--muted); font-size: 11px; }
 .scene.selected { border-color: var(--lime); background: #b8ff3d0c; }
 .scene.add { color: var(--muted); }
+.saved-scenes { min-height: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 7px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #0d1218; }
+.saved-scenes-heading { grid-column: 1 / -1; display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; }
+.saved-scenes > small { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: 8px; }
+.saved-scene { min-width: 0; display: grid; grid-template-columns: 1fr 27px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #151c25; }
+.saved-scene > button:first-child { min-width: 0; display: flex; align-items: center; gap: 7px; padding: 8px; border: 0; background: transparent; text-align: left; }
+.saved-scene > button:first-child span { flex: 0 0 auto; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 5px; background: #35d5cc19; color: var(--cyan); font-size: 10px; }
+.saved-scene > button:first-child b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.delete-scene { border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 17px; }
+.delete-scene:hover { color: #ff8589; background: #ff5d6310; }
 .audio-channel { margin-top: 20px; padding: 14px; border-radius: 10px; background: #161d26; }
 .meter { height: 110px; display: flex; align-items: flex-end; gap: 4px; margin: 15px 0; }
 .meter i { flex: 1; background: #26313b; border-radius: 3px; }
