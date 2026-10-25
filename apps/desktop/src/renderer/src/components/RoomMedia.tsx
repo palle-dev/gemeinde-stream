@@ -17,6 +17,7 @@ export interface ParticipantMedia {
   name: string;
   isLocal: boolean;
   isSpeaking: boolean;
+  audioLevel: number;
   cameraTrack?: VideoMediaTrack;
   screenTrack?: VideoMediaTrack;
   microphoneMuted: boolean;
@@ -35,6 +36,7 @@ function toParticipantMedia(participant: Participant, isLocal: boolean): Partici
     name: participant.name || participant.identity,
     isLocal,
     isSpeaking: participant.isSpeaking,
+    audioLevel: participant.audioLevel,
     cameraTrack: camera?.videoTrack,
     screenTrack: screen?.videoTrack,
     microphoneMuted: !microphone || microphone.isMuted,

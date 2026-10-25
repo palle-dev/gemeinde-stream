@@ -11,6 +11,8 @@ Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p-F
 
 Host, Co-Host und Operator können Quellenkombinationen als benannte Szenen speichern. Die Szenen liegen zentral in Base44, stehen der gesamten berechtigten Regie zur Verfügung und laden Layout sowie Kamera- oder Bildschirmquellen wieder in die Vorschau; erst `TAKE` schaltet sie sicher ins Programm.
 
+Der Audiobereich der Live-Regie enthält einen echten lokalen Mixer für alle Remote-Mikrofone. Regie-Rollen sehen Live-Pegel, können Kanäle stummschalten und deren Wiedergabelautstärke für die Programmausgabe einstellen.
+
 Vor dem Beitritt steht ein Vorraum mit Kameravorschau, Anzeigename sowie Auswahl von Kamera, Mikrofon und Lautsprecher bereit. Die persönlichen Geräte- und Ein/Aus-Einstellungen werden lokal für den nächsten Raum gespeichert.
 
 In Meetings sehen alle Teilnehmer ihre Rollen. Host, Co-Host und Operator können untergeordnete Rollen stummschalten oder aus dem Raum entfernen; Host und gleichrangige Moderatoren sind vor unzulässigen Eingriffen geschützt.
