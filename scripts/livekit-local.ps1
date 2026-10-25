@@ -178,7 +178,7 @@ function Invoke-SmokeTest {
 
     Push-Location $projectRoot
     try {
-        & node "work/livekit-smoke.mjs"
+        & node "scripts/livekit-smoke.mjs"
         if ($LASTEXITCODE -ne 0) { throw "Der LiveKit-Smoke-Test ist fehlgeschlagen." }
     } finally {
         Pop-Location
