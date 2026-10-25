@@ -140,19 +140,35 @@ export function ProgramRecorder({ room, title, programState, sources, audioMix, 
       const audioContext = new AudioContext();
       await audioContext.resume();
       const audioDestination = audioContext.createMediaStreamDestination();
-      const audioNodes: MediaStreamAudioSourceNode[] = [];
-      const gainNodes = new Map<string, GainNode>();
-      const mediaParticipants = [room.localParticipant, ...room.remoteParticipants.values()];
-      for (const participant of mediaParticipants) {
-        const mediaTrack = participant.getTrackPublication(Track.Source.Microphone)?.audioTrack?.mediaStreamTrack;
-        if (!mediaTrack || mediaTrack.readyState !== "live") continue;
-        const node = audioContext.createMediaStreamSource(new MediaStream([mediaTrack]));
-        const gain = audioContext.createGain();
-        gain.gain.value = programRef.current.audioMix[participant.identity] ?? 1;
-        node.connect(gain).connect(audioDestination);
-        audioNodes.push(node);
-        gainNodes.set(participant.identity, gain);
-      }
+      const audioNodes = new Map<string, { track: MediaStreamTrack; source: MediaStreamAudioSourceNode; gain: GainNode }>();
+      const syncAudioTracks = () => {
+        const activeIdentities = new Set<string>();
+        const mediaParticipants = [room.localParticipant, ...room.remoteParticipants.values()];
+        for (const participant of mediaParticipants) {
+          const mediaTrack = participant.getTrackPublication(Track.Source.Microphone)?.audioTrack?.mediaStreamTrack;
+          if (!mediaTrack || mediaTrack.readyState !== "live") continue;
+          activeIdentities.add(participant.identity);
+          const existing = audioNodes.get(participant.identity);
+          if (existing?.track === mediaTrack) {
+            existing.gain.gain.value = programRef.current.audioMix[participant.identity] ?? 1;
+            continue;
+          }
+          existing?.source.disconnect();
+          existing?.gain.disconnect();
+          const source = audioContext.createMediaStreamSource(new MediaStream([mediaTrack]));
+          const gain = audioContext.createGain();
+          gain.gain.value = programRef.current.audioMix[participant.identity] ?? 1;
+          source.connect(gain).connect(audioDestination);
+          audioNodes.set(participant.identity, { track: mediaTrack, source, gain });
+        }
+        for (const [identity, node] of audioNodes) {
+          if (activeIdentities.has(identity)) continue;
+          node.source.disconnect();
+          node.gain.disconnect();
+          audioNodes.delete(identity);
+        }
+      };
+      syncAudioTracks();
       const combined = new MediaStream([...canvasStream.getVideoTracks(), ...audioDestination.stream.getAudioTracks()]);
       const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((type) => MediaRecorder.isTypeSupported(type));
       const recorder = new MediaRecorder(combined, mimeType ? { mimeType, videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 192_000 } : undefined);
@@ -172,16 +188,13 @@ export function ProgramRecorder({ room, title, programState, sources, audioMix, 
       cleanupRef.current = () => {
         window.cancelAnimationFrame(frame);
         for (const attached of attachedVideos.values()) attached.track.detach(attached.element);
-        audioNodes.forEach((node) => node.disconnect());
-        gainNodes.forEach((node) => node.disconnect());
+        audioNodes.forEach((node) => { node.source.disconnect(); node.gain.disconnect(); });
         combined.getTracks().forEach((track) => track.stop());
         void audioContext.close();
         recorderRef.current = null;
         cleanupRef.current = null;
       };
-      const updateRecordingMix = window.setInterval(() => {
-        gainNodes.forEach((gain, identity) => { gain.gain.value = programRef.current.audioMix[identity] ?? 1; });
-      }, 100);
+      const updateRecordingMix = window.setInterval(syncAudioTracks, 250);
       const cleanup = cleanupRef.current;
       cleanupRef.current = () => {
         window.clearInterval(updateRecordingMix);
