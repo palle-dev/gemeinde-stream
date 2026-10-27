@@ -74,6 +74,7 @@ LiveKit muss einmalig mit Homebrew installiert werden (`brew install livekit`). 
 
 ```bash
 npm ci
+npm run electron:setup
 cp .env.example .env.local
 # LIVEKIT_API_KEY und LIVEKIT_API_SECRET durch eigene zufällige Werte ersetzen.
 # Falls noch nicht vorhanden, auch die Desktop-Konfiguration anlegen:
@@ -81,6 +82,11 @@ cp apps/desktop/.env.example apps/desktop/.env.local
 npm run livekit:setup
 npm run dev:local
 ```
+
+Seit Electron 42 wird die plattformspezifische Entwicklungs-Binärdatei aus
+Sicherheitsgründen nicht mehr durch ein npm-`postinstall` geladen. `dev` und
+`preview` führen den offiziellen On-Demand-Installer automatisch aus;
+`npm run electron:setup` kann ihn vorab ausdrücklich starten.
 
 Vorhandene `.env.local`-Dateien beibehalten. Der Mac-Server bindet ausschließlich an `127.0.0.1` und ist für Tests auf demselben Mac vorgesehen. Protokolle und Prozess-ID liegen im ignorierten Verzeichnis `work/`. `npm run livekit:smoke` prüft den authentifizierten Zugriff auf den Server; Kamera, Mikrofon und Bildschirmfreigabe müssen zusätzlich in der Anwendung geprüft werden. Für diesen Entwicklungsstart ist kein Mac-Installer erforderlich.
 
@@ -121,6 +127,11 @@ npm run stream:smoke
 Bei jedem Push auf `main` und bei Pull Requests führt GitHub Typprüfung, Tests und Build unter macOS sowie die Prüfungen und den Installer-Build unter Windows aus. Bei Pushes werden macOS-Pakete für Intel und Apple Silicon sowie der Windows-Installer 14 Tage als Build-Artefakte bereitgestellt. Ein Tag wie `v0.3.0` erzeugt nach erfolgreicher Code-Signatur und macOS-Notarisierung zusätzlich ein dauerhaftes GitHub-Release, sofern Tag und Paketversion übereinstimmen.
 
 Unter **Einstellungen → Support & Diagnose** lässt sich ein Supportbericht mit Laufzeitdaten und den letzten maskierten Fehlerprotokollen exportieren. Zugangsdaten und RTMP-Stream-Schlüssel werden vor dem Schreiben entfernt.
+
+Unter **Einstellungen → Softwareaktualisierung** prüft die Anwendung das
+öffentliche GitHub-Release. Ein neuer Installer wird bewusst über die offizielle
+Release-Seite ausgewählt, damit Intel-, Apple-Silicon- und Windows-Pakete nicht
+verwechselt und laufende Produktionen nicht automatisch unterbrochen werden.
 
 ## Base44-Funktionen sicher veröffentlichen
 

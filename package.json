@@ -10,6 +10,7 @@
     "build": "npm run build --workspace @gemeinde-stream/desktop",
     "dist:win": "npm run dist:win --workspace @gemeinde-stream/desktop",
     "dist:mac": "npm run dist:mac --workspace @gemeinde-stream/desktop",
+    "electron:setup": "npm run electron:setup --workspace @gemeinde-stream/desktop",
     "dev": "npm run dev --workspace @gemeinde-stream/desktop",
     "dev:local": "npm run livekit:start && npm run dev",
     "livekit:setup": "node scripts/livekit-local.mjs Setup",

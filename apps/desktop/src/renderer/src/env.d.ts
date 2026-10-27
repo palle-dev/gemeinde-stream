@@ -17,6 +17,13 @@ interface Window {
       detail?: string,
     ): Promise<void>;
     exportDiagnostics(): Promise<boolean>;
+    checkForUpdates(): Promise<{
+      currentVersion: string;
+      latestVersion: string;
+      available: boolean;
+      releaseUrl: string;
+    }>;
+    openUpdate(releaseUrl: string): Promise<void>;
     onOpenJoinLink(callback: (joinCode: string) => void): () => void;
     listMedia(): Promise<
       Array<{

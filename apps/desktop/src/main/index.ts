@@ -31,6 +31,12 @@ import {
 } from "./mediaLibrary";
 import { RecordingStore } from "./recordings";
 import { redactDiagnosticText } from "./diagnostics";
+import {
+  isNewerVersion,
+  normalizeVersion,
+  trustedReleaseUrl,
+  type ReleaseUpdate,
+} from "./updates";
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -207,6 +213,50 @@ ipcMain.handle("diagnostics:export", async (event) => {
     "utf8",
   );
   return true;
+});
+
+ipcMain.handle("update:check", async (event): Promise<ReleaseUpdate> => {
+  assertTrustedSender(event.sender.id);
+  const response = await net.fetch(
+    "https://api.github.com/repos/palle-dev/gemeinde-stream/releases/latest",
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": `Gemeinde-Stream/${app.getVersion()}`,
+      },
+    },
+  );
+  if (!response.ok)
+    throw new Error(
+      response.status === 403
+        ? "Die Update-Prüfung ist vorübergehend begrenzt. Bitte später erneut versuchen."
+        : "Die aktuelle Version konnte nicht von GitHub abgerufen werden.",
+    );
+  const release = (await response.json()) as {
+    tag_name?: string;
+    html_url?: string;
+  };
+  const latestVersion = normalizeVersion(release.tag_name || "");
+  if (
+    !latestVersion ||
+    !release.html_url ||
+    !trustedReleaseUrl(release.html_url)
+  )
+    throw new Error("GitHub hat ungültige Releaseinformationen geliefert.");
+  const currentVersion = app.getVersion();
+  return {
+    currentVersion,
+    latestVersion,
+    available: isNewerVersion(latestVersion, currentVersion),
+    releaseUrl: release.html_url,
+  };
+});
+
+ipcMain.handle("update:open", async (event, releaseUrl: string) => {
+  assertTrustedSender(event.sender.id);
+  if (!trustedReleaseUrl(releaseUrl))
+    throw new Error("Die Release-Adresse ist nicht vertrauenswürdig.");
+  await shell.openExternal(releaseUrl);
 });
 
 ipcMain.handle("media:list", (event) => {

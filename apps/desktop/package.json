@@ -6,11 +6,12 @@
   "private": true,
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "electron:setup": "install-electron --no",
+    "dev": "npm run electron:setup && electron-vite dev",
     "build": "electron-vite build",
     "dist:win": "npm run build && electron-builder --win nsis",
     "dist:mac": "npm run build && electron-builder --mac dmg zip",
-    "preview": "electron-vite preview",
+    "preview": "npm run electron:setup && electron-vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

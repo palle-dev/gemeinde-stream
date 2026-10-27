@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import {
   FileDown,
+  ExternalLink,
   Laptop,
   Plus,
+  RefreshCw,
   Save,
   ShieldCheck,
   Trash2,
@@ -108,6 +110,13 @@ export function OrganizationAdmin({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(true);
   const [exportingDiagnostics, setExportingDiagnostics] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<{
+    currentVersion: string;
+    latestVersion: string;
+    available: boolean;
+    releaseUrl: string;
+  } | null>(null);
   const canAdmin = data.actorRole === "admin";
   function apply(next: OrganizationState) {
     setData(next);
@@ -284,6 +293,48 @@ export function OrganizationAdmin({
       setExportingDiagnostics(false);
     }
   }
+  async function checkForUpdates() {
+    setCheckingUpdate(true);
+    try {
+      if (!window.desktop?.checkForUpdates)
+        throw new Error(
+          "Die Update-Prüfung wurde aktualisiert. Bitte starten Sie Gemeinde Stream einmal neu.",
+        );
+      const result = await window.desktop.checkForUpdates();
+      setUpdateInfo(result);
+      setError("");
+      notify(
+        result.available
+          ? `Version ${result.latestVersion} ist verfügbar.`
+          : "Gemeinde Stream ist auf dem aktuellen Stand.",
+        result.available ? "info" : "success",
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Update-Prüfung konnte nicht abgeschlossen werden.",
+      );
+    } finally {
+      setCheckingUpdate(false);
+    }
+  }
+  async function openAvailableUpdate() {
+    if (!updateInfo?.available) return;
+    try {
+      if (!window.desktop?.openUpdate)
+        throw new Error(
+          "Die Update-Funktion wurde aktualisiert. Bitte starten Sie Gemeinde Stream einmal neu.",
+        );
+      await window.desktop.openUpdate(updateInfo.releaseUrl);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Die Release-Seite konnte nicht geöffnet werden.",
+      );
+    }
+  }
   const diagnosticsCard = (
     <section className="diagnostics-card">
       <div>
@@ -307,6 +358,41 @@ export function OrganizationAdmin({
           ? "Wird erstellt …"
           : "Supportbericht exportieren"}
       </button>
+    </section>
+  );
+  const updateCard = (
+    <section className="diagnostics-card">
+      <div>
+        <RefreshCw />
+        <span>
+          <b>Softwareaktualisierung</b>
+          <small>
+            Installiert: {window.desktop?.version ?? desktopPackage.version}
+            {updateInfo
+              ? ` · Veröffentlicht: ${updateInfo.latestVersion}`
+              : " · Manuelle, architektursichere Prüfung"}
+          </small>
+        </span>
+      </div>
+      {updateInfo?.available ? (
+        <button
+          type="button"
+          className="primary compact"
+          onClick={() => void openAvailableUpdate()}
+        >
+          <ExternalLink /> Version {updateInfo.latestVersion} öffnen
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="secondary compact"
+          onClick={() => void checkForUpdates()}
+          disabled={checkingUpdate}
+        >
+          <RefreshCw className={checkingUpdate ? "spin" : ""} />
+          {checkingUpdate ? "Wird geprüft …" : "Nach Updates suchen"}
+        </button>
+      )}
     </section>
   );
   if (busy && !data.organization)
@@ -339,6 +425,7 @@ export function OrganizationAdmin({
             <Plus /> Gemeinde anlegen
           </button>
         </form>
+        {updateCard}
         {diagnosticsCard}
         {error && <div className="error-banner">{error}</div>}
       </section>
@@ -417,6 +504,7 @@ export function OrganizationAdmin({
             </button>
           )}
         </form>
+        {updateCard}
         {diagnosticsCard}
         {error && <div className="error-banner">{error}</div>}
       </section>

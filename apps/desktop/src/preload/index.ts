@@ -20,6 +20,15 @@ contextBridge.exposeInMainWorld("desktop", {
     ) as Promise<void>,
   exportDiagnostics: () =>
     ipcRenderer.invoke("diagnostics:export") as Promise<boolean>,
+  checkForUpdates: () =>
+    ipcRenderer.invoke("update:check") as Promise<{
+      currentVersion: string;
+      latestVersion: string;
+      available: boolean;
+      releaseUrl: string;
+    }>,
+  openUpdate: (releaseUrl: string) =>
+    ipcRenderer.invoke("update:open", releaseUrl) as Promise<void>,
   onOpenJoinLink: (callback: (joinCode: string) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, joinCode: string) =>
       callback(joinCode);
