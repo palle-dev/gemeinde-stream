@@ -8,7 +8,17 @@ permissions:
   contents: write
 
 jobs:
+  validate-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tag und Paketversion prüfen
+        run: |
+          package_version=$(node -p "require('./apps/desktop/package.json').version")
+          test "$GITHUB_REF_NAME" = "v$package_version"
+
   windows:
+    needs: validate-version
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -31,6 +41,17 @@ jobs:
           npm test
           npm run stream:smoke
           npm run dist:win
+      - name: Windows-Code-Signatur verifizieren
+        shell: pwsh
+        run: |
+          $installers = Get-ChildItem "apps/desktop/release/*.exe"
+          if ($installers.Count -eq 0) { throw "Kein Windows-Installer gefunden." }
+          foreach ($installer in $installers) {
+            $signature = Get-AuthenticodeSignature $installer.FullName
+            if ($signature.Status -ne "Valid") {
+              throw "Ungültige Signatur für $($installer.Name): $($signature.Status)"
+            }
+          }
       - uses: actions/upload-artifact@v7
         with:
           name: release-windows
@@ -38,6 +59,7 @@ jobs:
           if-no-files-found: error
 
   macos:
+    needs: validate-version
     strategy:
       fail-fast: false
       matrix:
@@ -76,6 +98,16 @@ jobs:
           npm test
           npm run stream:smoke
           npm run dist:mac
+      - name: Code-Signatur und Notarisierung verifizieren
+        run: |
+          app_bundle=$(find apps/desktop/release -name 'Gemeinde Stream.app' -type d | head -1)
+          test -n "$app_bundle"
+          codesign --verify --deep --strict --verbose=2 "$app_bundle"
+          spctl --assess --type execute --verbose=2 "$app_bundle"
+          xcrun stapler validate "$app_bundle"
+          for package in apps/desktop/release/*.dmg; do
+            xcrun stapler validate "$package"
+          done
       - name: Anwendung und FFmpeg-Architektur prüfen
         run: |
           app_binary=$(find apps/desktop/release -path '*/Gemeinde Stream.app/Contents/MacOS/Gemeinde Stream' -type f | head -1)
@@ -97,10 +129,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Versionsnummer prüfen
-        run: |
-          package_version=$(node -p "require('./apps/desktop/package.json').version")
-          test "$GITHUB_REF_NAME" = "v$package_version"
       - uses: actions/download-artifact@v7
         with:
           pattern: release-*

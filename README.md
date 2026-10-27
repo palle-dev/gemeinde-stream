@@ -146,6 +146,8 @@ Die produktive Einrichtung mit öffentlicher Domain, TLS und TURN ist unter [`in
 
 Für Aufbau, Startreihenfolge, Störungsmaßnahmen und Nachbereitung einer echten
 Übertragung gilt das [Produktions-Runbook](docs/PRODUCTION-RUNBOOK.md).
+Der Ablauf für signierte, notarisierte Desktop-Pakete ist unter
+[Signiertes Desktop-Release](docs/RELEASE.md) beschrieben.
 
 ## Sicherheitsmodell
 
