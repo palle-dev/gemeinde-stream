@@ -144,6 +144,9 @@ Danach erzeugt ausschließlich das Base44-Backend kurzlebige, rollenbasierte Rau
 
 Die produktive Einrichtung mit öffentlicher Domain, TLS und TURN ist unter [`infra/livekit`](infra/livekit/README.md) dokumentiert.
 
+Für Aufbau, Startreihenfolge, Störungsmaßnahmen und Nachbereitung einer echten
+Übertragung gilt das [Produktions-Runbook](docs/PRODUCTION-RUNBOOK.md).
+
 ## Sicherheitsmodell
 
 - Räume sind standardmäßig privat.
