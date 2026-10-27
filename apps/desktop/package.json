@@ -1,6 +1,6 @@
 {
   "name": "@gemeinde-stream/desktop",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Desktop-Studio für Gemeinde-Meetings und Live-Übertragungen",
   "author": "Gemeinde Stream",
   "private": true,

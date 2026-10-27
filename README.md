@@ -118,7 +118,7 @@ npm audit
 npm run stream:smoke
 ```
 
-Bei jedem Push auf `main` und bei Pull Requests führt GitHub Typprüfung, Tests und Build unter macOS sowie die Prüfungen und den Installer-Build unter Windows aus. Bei Pushes werden macOS-Pakete für Intel und Apple Silicon sowie der Windows-Installer 14 Tage als Build-Artefakte bereitgestellt. Ein Tag wie `v0.2.0` erzeugt nach erfolgreicher Code-Signatur und macOS-Notarisierung zusätzlich ein dauerhaftes GitHub-Release, sofern Tag und Paketversion übereinstimmen.
+Bei jedem Push auf `main` und bei Pull Requests führt GitHub Typprüfung, Tests und Build unter macOS sowie die Prüfungen und den Installer-Build unter Windows aus. Bei Pushes werden macOS-Pakete für Intel und Apple Silicon sowie der Windows-Installer 14 Tage als Build-Artefakte bereitgestellt. Ein Tag wie `v0.3.0` erzeugt nach erfolgreicher Code-Signatur und macOS-Notarisierung zusätzlich ein dauerhaftes GitHub-Release, sofern Tag und Paketversion übereinstimmen.
 
 Unter **Einstellungen → Support & Diagnose** lässt sich ein Supportbericht mit Laufzeitdaten und den letzten maskierten Fehlerprotokollen exportieren. Zugangsdaten und RTMP-Stream-Schlüssel werden vor dem Schreiben entfernt.
 
