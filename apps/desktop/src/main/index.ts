@@ -37,6 +37,7 @@ import {
   trustedReleaseUrl,
   type ReleaseUpdate,
 } from "./updates";
+import { settlesWithin } from "./streaming";
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -373,17 +374,26 @@ async function stopStream(senderId: number, force = false): Promise<void> {
   const active = activeStreams.get(senderId);
   if (!active) return;
   active.stopping = true;
-  await Promise.all(
-    [...active.targets.values()].map((target) =>
-      target.writes.catch(() => undefined),
-    ),
+  const targets = [...active.targets.values()];
+  const drained = await Promise.all(
+    targets.map((target) => settlesWithin(target.writes, 5_000)),
   );
-  for (const target of active.targets.values()) {
+  for (const [index, target] of targets.entries()) {
     if (target.stableTimer) clearTimeout(target.stableTimer);
-    force ? target.process.kill() : target.process.stdin.end();
+    if (target.process.exitCode !== null) continue;
+    if (force || !drained[index]) {
+      target.process.kill();
+      if (!drained[index])
+        void logDiagnostic(
+          "stream-stop-timeout",
+          `${target.label}: Schreibwarteschlange reagierte beim Stoppen nicht.`,
+        );
+    } else {
+      target.process.stdin.end();
+    }
   }
   await Promise.all(
-    [...active.targets.values()].map(
+    targets.map(
       (target) =>
         new Promise<void>((resolve) => {
           if (target.process.exitCode !== null) return resolve();
