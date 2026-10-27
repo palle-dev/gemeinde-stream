@@ -21,7 +21,9 @@ export function buildPreflightChecks(
   options: {
     hasProgram: boolean;
     hasSources: boolean;
+    roomConnected: boolean;
     requireFfmpeg: boolean;
+    requireNetwork: boolean;
     online: boolean;
     mediaRecorder: boolean;
   },
@@ -56,13 +58,24 @@ export function buildPreflightChecks(
       required: true,
     },
     {
+      id: "room",
+      label: "Medienraum",
+      detail: options.roomConnected
+        ? "LiveKit-Medienverbindung ist aktiv"
+        : "Keine aktive Verbindung zum Medienraum",
+      state: options.roomConnected ? "pass" : "fail",
+      required: true,
+    },
+    {
       id: "network",
       label: "Netzwerk",
-      detail: options.online
-        ? "Netzwerkverbindung erkannt"
-        : "Computer ist offline",
-      state: options.online ? "pass" : "fail",
-      required: true,
+      detail: !options.requireNetwork
+        ? "Für die lokale Aufnahme nicht erforderlich"
+        : options.online
+          ? "Netzwerkverbindung erkannt"
+          : "Computer ist offline",
+      state: !options.requireNetwork || options.online ? "pass" : "fail",
+      required: options.requireNetwork,
     },
     {
       id: "ffmpeg",
@@ -116,7 +129,9 @@ export function buildPreflightChecks(
 export function useProductionPreflight(options: {
   hasProgram: boolean;
   hasSources: boolean;
+  roomConnected: boolean;
   requireFfmpeg: boolean;
+  requireNetwork: boolean;
 }) {
   const [system, setSystem] = useState<SystemPreflight | null>(null);
   const [loading, setLoading] = useState(true);
@@ -140,14 +155,25 @@ export function useProductionPreflight(options: {
         online: navigator.onLine,
         mediaRecorder: typeof MediaRecorder !== "undefined",
       }),
-    [options.hasProgram, options.hasSources, options.requireFfmpeg, system],
+    [
+      options.hasProgram,
+      options.hasSources,
+      options.roomConnected,
+      options.requireFfmpeg,
+      options.requireNetwork,
+      system,
+    ],
   );
   return {
     checks,
     loading,
-    ready: checks.every((check) => !check.required || check.state !== "fail"),
+    ready: preflightIsReady(checks),
     refresh,
   };
+}
+
+export function preflightIsReady(checks: PreflightCheck[]): boolean {
+  return checks.every((check) => !check.required || check.state === "pass");
 }
 
 export function ProductionPreflight({
@@ -159,19 +185,19 @@ export function ProductionPreflight({
   loading: boolean;
   onRefresh: () => void;
 }) {
-  const failures = checks.filter(
-    (check) => check.required && check.state === "fail",
+  const blocking = checks.filter(
+    (check) => check.required && check.state !== "pass",
   ).length;
   return (
     <section
-      className={`production-preflight ${failures ? "blocked" : "ready"}`}
+      className={`production-preflight ${blocking ? "blocked" : "ready"}`}
     >
       <header>
         <div>
           <b>Technik-Preflight</b>
           <small>
-            {failures
-              ? `${failures} kritische Punkte`
+            {blocking
+              ? `${blocking} kritische oder ausstehende Punkte`
               : "Bereit für die Ausspielung"}
           </small>
         </div>

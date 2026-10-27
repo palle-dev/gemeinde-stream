@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CircleStop, Disc3 } from "lucide-react";
-import type { Room } from "livekit-client";
+import { ConnectionState, type Room } from "livekit-client";
 import type { BroadcastProgramState } from "./BroadcastCoordination";
 import {
   createProgramMediaSession,
@@ -65,7 +65,9 @@ export function ProgramRecorder({
   const preflight = useProductionPreflight({
     hasProgram: Boolean(programState),
     hasSources: sources.length > 0,
+    roomConnected: room.state === ConnectionState.Connected,
     requireFfmpeg: false,
+    requireNetwork: false,
   });
   useEffect(() => {
     programRef.current = { programState, sources, audioMix };

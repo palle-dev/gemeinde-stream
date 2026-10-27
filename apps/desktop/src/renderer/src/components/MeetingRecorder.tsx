@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CircleStop, Disc3 } from "lucide-react";
-import { Room, Track } from "livekit-client";
+import { ConnectionState, Room, Track } from "livekit-client";
 import { PROGRAM_HEIGHT, PROGRAM_WIDTH } from "../lib/room";
 import {
   currentProductionProfile,
@@ -282,7 +282,9 @@ export function MeetingRecorder({
   const preflight = useProductionPreflight({
     hasProgram: sources.length > 0,
     hasSources: sources.length > 0,
+    roomConnected: room.state === ConnectionState.Connected,
     requireFfmpeg: false,
+    requireNetwork: false,
   });
   useEffect(() => {
     snapshotRef.current = { layout, sources };

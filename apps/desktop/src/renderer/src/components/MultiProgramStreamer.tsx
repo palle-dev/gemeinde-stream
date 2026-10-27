@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CircleStop, Plus, Radio, Trash2 } from "lucide-react";
-import type { Room } from "livekit-client";
+import { ConnectionState, type Room } from "livekit-client";
 import type { BroadcastProgramState } from "./BroadcastCoordination";
 import {
   createProgramMediaSession,
@@ -115,7 +115,9 @@ export function MultiProgramStreamer({
   const preflight = useProductionPreflight({
     hasProgram: Boolean(programState),
     hasSources: sources.length > 0,
+    roomConnected: room.state === ConnectionState.Connected,
     requireFfmpeg: true,
+    requireNetwork: true,
   });
   useEffect(() => {
     programRef.current = { programState, sources, audioMix };
