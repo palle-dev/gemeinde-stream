@@ -17,6 +17,7 @@
     "livekit:stop": "node scripts/livekit-local.mjs Stop",
     "livekit:status": "node scripts/livekit-local.mjs Status",
     "livekit:smoke": "node scripts/livekit-local.mjs Smoke",
+    "stream:smoke": "node scripts/rtmp-smoke.mjs",
     "base44:deploy:functions": "node scripts/deploy-base44-functions.mjs",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"

@@ -27,6 +27,8 @@ jobs:
         run: npm run typecheck
       - name: Tests ausführen
         run: npm test
+      - name: Lokale RTMP-Ausspielung prüfen
+        run: npm run stream:smoke
       - name: Desktop-Anwendung bauen
         run: npm run build
 
@@ -94,6 +96,9 @@ jobs:
 
       - name: Tests ausführen
         run: npm test
+
+      - name: Lokale RTMP-Ausspielung prüfen
+        run: npm run stream:smoke
 
       - name: Windows-Installer bauen
         run: npm run dist:win
