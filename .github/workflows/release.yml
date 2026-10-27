@@ -1,51 +1,113 @@
-name: Windows-Release
+name: Signiertes Desktop-Release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  windows:
     runs-on: windows-latest
-    timeout-minutes: 25
-
+    timeout-minutes: 30
+    env:
+      CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
+      CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
     steps:
-      - name: Quellcode auschecken
-        uses: actions/checkout@v7
-
-      - name: Node.js einrichten
-        uses: actions/setup-node@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
-
-      - name: Abhängigkeiten installieren
-        run: npm ci
-
-      - name: Prüfen und Installer bauen
+      - run: npm ci
+      - name: Windows-Signaturkonfiguration prüfen
+        shell: pwsh
+        run: |
+          if (-not $env:CSC_LINK -or -not $env:CSC_KEY_PASSWORD) { throw "Windows-Code-Signing-Secrets fehlen." }
+      - name: Prüfen und Windows-Installer bauen
         run: |
           npm run typecheck
           npm test
           npm run dist:win
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-windows
+          path: apps/desktop/release/*.exe
+          if-no-files-found: error
 
-      - name: Versionsnummer prüfen
-        shell: pwsh
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            arch: x64
+            file_arch: x86_64
+          - runner: macos-15
+            arch: arm64
+            file_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    env:
+      CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
+      CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Signaturkonfiguration prüfen
         run: |
-          $packageVersion = node -p "require('./apps/desktop/package.json').version"
-          if ($env:GITHUB_REF_NAME -ne "v$packageVersion") {
-            throw "Tag $env:GITHUB_REF_NAME passt nicht zur App-Version $packageVersion."
-          }
+          test -n "$CSC_LINK"
+          test -n "$CSC_KEY_PASSWORD"
+          test -n "$APPLE_ID"
+          test -n "$APPLE_APP_SPECIFIC_PASSWORD"
+          test -n "$APPLE_TEAM_ID"
+      - name: Prüfen, signieren und notarisiertes macOS-Paket bauen
+        run: |
+          npm run typecheck
+          npm test
+          npm run dist:mac
+      - name: Anwendung und FFmpeg-Architektur prüfen
+        run: |
+          app_binary=$(find apps/desktop/release -path '*/Gemeinde Stream.app/Contents/MacOS/Gemeinde Stream' -type f | head -1)
+          ffmpeg_binary=$(find apps/desktop/release -path '*/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg' -type f | head -1)
+          test -n "$app_binary"
+          test -n "$ffmpeg_binary"
+          file "$app_binary" | grep '${{ matrix.file_arch }}'
+          file "$ffmpeg_binary" | grep '${{ matrix.file_arch }}'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-macos-${{ matrix.arch }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+          if-no-files-found: error
 
+  publish:
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Versionsnummer prüfen
+        run: |
+          package_version=$(node -p "require('./apps/desktop/package.json').version")
+          test "$GITHUB_REF_NAME" = "v$package_version"
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+      - name: Prüfsummen erzeugen
+        working-directory: release-assets
+        run: sha256sum * > SHA256SUMS.txt
       - name: GitHub-Release veröffentlichen
-        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          $version = node -p "require('./apps/desktop/package.json').version"
-          $installer = "apps/desktop/release/Gemeinde Stream Setup $version.exe"
-          gh release create $env:GITHUB_REF_NAME $installer --generate-notes --title "Gemeinde Stream $version"
-
+        run: gh release create "$GITHUB_REF_NAME" release-assets/* --generate-notes --title "Gemeinde Stream $GITHUB_REF_NAME"

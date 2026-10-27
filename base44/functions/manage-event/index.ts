@@ -1,4 +1,10 @@
 import { createClientFromRequest } from "npm:@base44/sdk";
+import { RoomServiceClient } from "npm:livekit-server-sdk";
+
+function apiUrl(url: string) {
+  return url.replace(/^wss:/, "https:").replace(/^ws:/, "http:");
+}
+function isLocalServer(url: string) { try { return ["localhost", "127.0.0.1", "::1"].includes(new URL(url).hostname); } catch { return false; } }
 
 Deno.serve(async (req) => {
   try {
@@ -9,7 +15,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const eventId = String(body.eventId ?? "");
     const action = String(body.action ?? "");
-    if (!eventId || !["update", "delete", "lock", "unlock"].includes(action)) {
+    if (!eventId || !["update", "delete", "lock", "unlock", "start", "end"].includes(action)) {
       return Response.json({ error: "Ungültige Veranstaltungsanfrage" }, { status: 400 });
     }
 
@@ -27,17 +33,43 @@ Deno.serve(async (req) => {
       return Response.json({ event: updated });
     }
 
+    if (action === "start") {
+      if (event.status === "ended") return Response.json({ error: "Eine beendete Veranstaltung kann nicht erneut gestartet werden" }, { status: 409 });
+      const updated = event.status === "live" ? event : await base44.asServiceRole.entities.Event.update(event.id, { status: "live" });
+      return Response.json({ event: updated });
+    }
+
+    if (action === "end") {
+      if (event.status !== "ended") {
+        const apiKey = Deno.env.get("LIVEKIT_API_KEY");
+        const apiSecret = Deno.env.get("LIVEKIT_API_SECRET");
+        const serverUrl = Deno.env.get("LIVEKIT_URL");
+        if (!apiKey || !apiSecret || !serverUrl) return Response.json({ error: "LiveKit ist noch nicht konfiguriert" }, { status: 503 });
+        if (!isLocalServer(serverUrl)) {
+          try {
+            await new RoomServiceClient(apiUrl(serverUrl), apiKey, apiSecret).deleteRoom(event.livekit_room_name);
+          } catch (error) {
+            if (!String(error).toLowerCase().includes("not found")) throw error;
+          }
+        }
+      }
+      const updated = event.status === "ended" ? event : await base44.asServiceRole.entities.Event.update(event.id, { status: "ended" });
+      return Response.json({ event: updated });
+    }
+
     if (action === "delete") {
       if (event.status === "live") {
         return Response.json({ error: "Eine laufende Veranstaltung muss zuerst beendet werden" }, { status: 409 });
       }
-      const [members, scenes] = await Promise.all([
+      const [members, scenes, rundownItems] = await Promise.all([
         base44.asServiceRole.entities.RoomMember.filter({ event_id: event.id }, "created_date", 500, 0),
         base44.asServiceRole.entities.Scene.filter({ event_id: event.id }, "created_date", 500, 0),
+        base44.asServiceRole.entities.RundownItem.filter({ event_id: event.id }, "position", 500, 0),
       ]);
       await Promise.all([
         ...members.map((member) => base44.asServiceRole.entities.RoomMember.delete(member.id)),
         ...scenes.map((scene) => base44.asServiceRole.entities.Scene.delete(scene.id)),
+        ...rundownItems.map((item) => base44.asServiceRole.entities.RundownItem.delete(item.id)),
       ]);
       await base44.asServiceRole.entities.Event.delete(event.id);
       return Response.json({ deleted: true });
@@ -62,6 +94,8 @@ Deno.serve(async (req) => {
       default_camera_on: Boolean(body.defaultCameraOn),
       default_microphone_on: Boolean(body.defaultMicrophoneOn),
       waiting_room_enabled: Boolean(body.waitingRoomEnabled),
+      recording_enabled: Boolean(body.recordingEnabled),
+      streaming_enabled: event.mode === "broadcast" && Boolean(body.streamingEnabled),
     };
     const updated = await base44.asServiceRole.entities.Event.update(event.id, changes);
     const members = await base44.asServiceRole.entities.RoomMember.filter({ event_id: event.id }, "created_date", 500, 0);

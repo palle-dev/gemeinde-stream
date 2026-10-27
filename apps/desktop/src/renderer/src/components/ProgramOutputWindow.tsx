@@ -21,20 +21,36 @@ const outputStyles = `
   .program-overlay span { margin-top: .55em; color: #b8c4cf; font-size: clamp(16px, 1.4vw, 27px); }
 `;
 
-export function ProgramOutputWindow({ open, children, onClosed, onError }: { open: boolean; children: ReactNode; onClosed: () => void; onError: (message: string) => void }) {
+export function ProgramOutputWindow({
+  open,
+  children,
+  onClosed,
+  onError,
+}: {
+  open: boolean;
+  children: ReactNode;
+  onClosed: () => void;
+  onError: (message: string) => void;
+}) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    const outputWindow = window.open("", "gemeinde-stream-program-output", "popup=yes,width=1920,height=1080");
+    const outputWindow = window.open(
+      "",
+      "gemeinde-stream-program-output",
+      "popup=yes,width=1920,height=1080",
+    );
     if (!outputWindow) {
       onError("Das Programmausgabefenster konnte nicht geöffnet werden.");
       onClosed();
       return;
     }
 
-    outputWindow.document.title = "Gemeinde Stream · Programmausgabe";
     outputWindow.document.head.replaceChildren();
+    const title = outputWindow.document.createElement("title");
+    title.textContent = "Gemeinde Stream · Programmausgabe";
+    outputWindow.document.head.appendChild(title);
     const style = outputWindow.document.createElement("style");
     style.textContent = outputStyles;
     outputWindow.document.head.appendChild(style);

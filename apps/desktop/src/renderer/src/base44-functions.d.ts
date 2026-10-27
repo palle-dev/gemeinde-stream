@@ -10,5 +10,6 @@ declare module "@base44/sdk" {
     "manage-event": true;
     "manage-rundown": true;
     "manage-organization": true;
+    "manage-program-state": true;
   }
 }

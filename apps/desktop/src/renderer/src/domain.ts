@@ -22,6 +22,8 @@ export interface EventRecord {
   waiting_room_enabled?: boolean;
   meeting_locked?: boolean;
   max_participants?: number;
+  recording_enabled?: boolean;
+  streaming_enabled?: boolean;
   created_date?: string;
 }
 
@@ -40,7 +42,9 @@ export interface MembershipRecord {
 export function createJoinCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = crypto.getRandomValues(new Uint8Array(8));
-  return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join("");
+  return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join(
+    "",
+  );
 }
 
 export function createLiveKitRoomName(): string {

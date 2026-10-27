@@ -1,7 +1,7 @@
 {
   "name": "@gemeinde-stream/desktop",
   "version": "0.2.0",
-  "description": "Windows-Studio für Gemeinde-Meetings und Live-Übertragungen",
+  "description": "Desktop-Studio für Gemeinde-Meetings und Live-Übertragungen",
   "author": "Gemeinde Stream",
   "private": true,
   "main": "out/main/index.js",
@@ -9,33 +9,36 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:mac": "npm run build && electron-builder --mac dmg zip",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@base44/sdk": "*",
+    "@base44/sdk": "0.8.57",
     "ffmpeg-static": "^5.3.0",
-    "livekit-client": "*",
-    "lucide-react": "*",
-    "react": "*",
-    "react-dom": "*"
+    "livekit-client": "2.23.0",
+    "lucide-react": "1.61.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
-    "@types/node": "*",
-    "@types/react": "*",
-    "@types/react-dom": "*",
-    "@vitejs/plugin-react": "*",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
     "electron": "45.0.0",
     "electron-builder": "^26.0.12",
-    "electron-vite": "*",
-    "typescript": "*",
-    "vite": "*",
-    "vitest": "*"
+    "electron-vite": "6.0.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
   },
   "build": {
     "appId": "de.gemeinde.stream",
     "productName": "Gemeinde Stream",
+    "icon": "build/icon.png",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "protocols": [
       {
         "name": "Gemeinde Stream Einladung",
@@ -50,10 +53,24 @@
       "package.json"
     ],
     "asarUnpack": [
+      "node_modules/ffmpeg-static/ffmpeg",
       "node_modules/ffmpeg-static/ffmpeg.exe"
     ],
     "win": {
       "target": "nsis"
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.video",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSCameraUsageDescription": "Gemeinde Stream benötigt die Kamera für Meetings und Live-Übertragungen.",
+        "NSMicrophoneUsageDescription": "Gemeinde Stream benötigt das Mikrofon für Meetings, Moderation und Live-Übertragungen.",
+        "NSScreenCaptureUsageDescription": "Gemeinde Stream benötigt die Bildschirmfreigabe für Präsentationen und Übertragungen."
+      }
     },
     "nsis": {
       "oneClick": false,

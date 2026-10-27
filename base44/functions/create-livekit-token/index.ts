@@ -1,5 +1,10 @@
 import { createClientFromRequest } from "npm:@base44/sdk";
-import { AccessToken } from "npm:livekit-server-sdk";
+import { AccessToken, RoomServiceClient, TrackSource } from "npm:livekit-server-sdk";
+
+function apiUrl(url: string) {
+  return url.replace(/^wss:/, "https:").replace(/^ws:/, "http:");
+}
+function isLocalServer(url: string) { try { return ["localhost", "127.0.0.1", "::1"].includes(new URL(url).hostname); } catch { return false; } }
 
 Deno.serve(async (req) => {
   try {
@@ -37,6 +42,23 @@ Deno.serve(async (req) => {
       return Response.json({ error: "LiveKit ist noch nicht konfiguriert" }, { status: 503 });
     }
 
+    let participants: Array<{ identity: string }> = [];
+    if (isLocalServer(serverUrl)) {
+      const joined = await base44.asServiceRole.entities.RoomMember.filter({ event_id: event.id, status: "joined" }, "created_date", 500, 0);
+      participants = joined.flatMap((candidate) => candidate.participant_identity ? [{ identity: candidate.participant_identity }] : []);
+    } else {
+      try {
+        participants = await new RoomServiceClient(apiUrl(serverUrl), apiKey, apiSecret).listParticipants(event.livekit_room_name);
+      } catch (error) {
+        if (!String(error).toLowerCase().includes("not found")) throw error;
+      }
+    }
+    const alreadyConnected = participants.some((participant) => participant.identity === user.id);
+    const maxParticipants = Number(event.max_participants ?? 50);
+    if (!alreadyConnected && participants.length >= maxParticipants) {
+      return Response.json({ error: `Der Raum ist mit ${maxParticipants} Personen vollständig belegt` }, { status: 409 });
+    }
+
     const role = isHost ? "host" : (member?.role ?? "participant");
     if (member && (member.participant_identity !== user.id || member.status !== "joined")) {
       await base44.asServiceRole.entities.RoomMember.update(member.id, {
@@ -45,7 +67,14 @@ Deno.serve(async (req) => {
         last_seen_at: new Date().toISOString(),
       });
     }
-    const canPublish = role !== "viewer";
+    const canPublishAudio = isHost || Boolean(member?.can_publish_audio);
+    const canPublishVideo = isHost || Boolean(member?.can_publish_video);
+    const canShareScreen = isHost || Boolean(member?.can_share_screen);
+    const canPublishSources = [
+      ...(canPublishAudio ? [TrackSource.MICROPHONE] : []),
+      ...(canPublishVideo ? [TrackSource.CAMERA] : []),
+      ...(canShareScreen ? [TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO] : []),
+    ];
     const requestedName = String(displayName ?? "").trim().slice(0, 80);
     const token = new AccessToken(apiKey, apiSecret, {
       identity: user.id,
@@ -56,7 +85,8 @@ Deno.serve(async (req) => {
     token.addGrant({
       roomJoin: true,
       room: event.livekit_room_name,
-      canPublish,
+      canPublish: canPublishSources.length > 0,
+      canPublishSources,
       canSubscribe: true,
       canPublishData: true,
       canUpdateOwnMetadata: false,

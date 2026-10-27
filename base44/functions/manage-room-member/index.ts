@@ -1,7 +1,21 @@
 import { createClientFromRequest } from "npm:@base44/sdk";
+import { RoomServiceClient, TrackSource } from "npm:livekit-server-sdk";
 
 const assignableRoles = ["cohost", "operator", "speaker", "participant", "viewer"];
 const roleRank: Record<string, number> = { host: 3, cohost: 2, operator: 2, speaker: 1, participant: 1, viewer: 1 };
+
+function roomService() {
+  const apiKey = Deno.env.get("LIVEKIT_API_KEY");
+  const apiSecret = Deno.env.get("LIVEKIT_API_SECRET");
+  const serverUrl = Deno.env.get("LIVEKIT_URL");
+  if (!apiKey || !apiSecret || !serverUrl) throw new Error("LiveKit ist noch nicht konfiguriert");
+  return new RoomServiceClient(serverUrl.replace(/^wss:/, "https:").replace(/^ws:/, "http:"), apiKey, apiSecret);
+}
+
+function isMissing(error: unknown) {
+  return String(error).toLowerCase().includes("not found");
+}
+function usesLocalLiveKit() { const url = Deno.env.get("LIVEKIT_URL") || ""; try { return ["localhost", "127.0.0.1", "::1"].includes(new URL(url).hostname); } catch { return false; } }
 
 Deno.serve(async (req) => {
   try {
@@ -14,7 +28,7 @@ Deno.serve(async (req) => {
     const action = String(body.action ?? "assign");
     const participantIdentity = String(body.participantIdentity ?? "");
     const role = String(body.role ?? "");
-    if (!eventId || !["assign", "list", "invite", "remove", "admit", "reject", "block"].includes(action)) {
+    if (!eventId || !["assign", "list", "invite", "remove", "admit", "reject", "block", "mute", "camera_off"].includes(action)) {
       return Response.json({ error: "Ungültige Mitgliederanfrage" }, { status: 400 });
     }
 
@@ -70,6 +84,10 @@ Deno.serve(async (req) => {
       if (user.role !== "admin" && roleRank[String(actorRole)] <= roleRank[String(member.role)]) {
         return Response.json({ error: "Dieses Mitglied darf nicht entfernt werden" }, { status: 403 });
       }
+      if (member.participant_identity && !usesLocalLiveKit()) {
+        try { await roomService().removeParticipant(event.livekit_room_name, member.participant_identity, { revokeTokenTs: BigInt(Math.floor(Date.now() / 1000)) }); }
+        catch (error) { if (!isMissing(error)) throw error; }
+      }
       await base44.asServiceRole.entities.RoomMember.delete(member.id);
       return Response.json({ removed: true });
     }
@@ -89,6 +107,33 @@ Deno.serve(async (req) => {
         status: "blocked",
         last_seen_at: new Date().toISOString(),
       });
+      if (!usesLocalLiveKit()) {
+        try { await roomService().removeParticipant(event.livekit_room_name, participantIdentity, { revokeTokenTs: BigInt(Math.floor(Date.now() / 1000)) }); }
+        catch (error) { if (!isMissing(error)) throw error; }
+      }
+      return Response.json({ member: updated });
+    }
+
+    if (action === "mute" || action === "camera_off") {
+      if (!participantIdentity) return Response.json({ error: "Teilnehmer fehlt" }, { status: 400 });
+      const matches = await base44.asServiceRole.entities.RoomMember.filter({ event_id: event.id, participant_identity: participantIdentity });
+      const member = matches[0];
+      if (!member) return Response.json({ error: "Teilnehmer wurde nicht gefunden" }, { status: 404 });
+      if (member.user_email === event.host_email || roleRank[String(actorRole)] <= roleRank[String(member.role)]) {
+        return Response.json({ error: "Diese Person darf nicht moderiert werden" }, { status: 403 });
+      }
+      if (!usesLocalLiveKit()) {
+        const service = roomService();
+        try {
+          const participant = await service.getParticipant(event.livekit_room_name, participantIdentity);
+          const source = action === "mute" ? TrackSource.MICROPHONE : TrackSource.CAMERA;
+          await Promise.all(participant.tracks.filter((track) => track.source === source).map((track) => service.mutePublishedTrack(event.livekit_room_name, participantIdentity, track.sid, true)));
+        } catch (error) {
+          if (!isMissing(error)) throw error;
+        }
+      }
+      const changes = action === "mute" ? { can_publish_audio: false } : { can_publish_video: false };
+      const updated = await base44.asServiceRole.entities.RoomMember.update(member.id, changes);
       return Response.json({ member: updated });
     }
 
@@ -131,6 +176,18 @@ Deno.serve(async (req) => {
       can_share_screen: canPublish,
       can_control_program: canControl,
     });
+
+    if (!usesLocalLiveKit()) try {
+      const canPublishSources = canPublish
+        ? [TrackSource.MICROPHONE, TrackSource.CAMERA, TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO]
+        : [];
+      await roomService().updateParticipant(event.livekit_room_name, participantIdentity, {
+        metadata: JSON.stringify({ eventId: event.id, role, mode: event.mode }),
+        permission: { canPublish, canSubscribe: true, canPublishData: true, canPublishSources },
+      });
+    } catch (error) {
+      if (!isMissing(error)) throw error;
+    }
 
     return Response.json({ member: updated });
   } catch (error) {

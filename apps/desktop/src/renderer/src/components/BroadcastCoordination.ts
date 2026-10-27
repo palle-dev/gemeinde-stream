@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Room, RoomEvent } from "livekit-client";
+import { base44 } from "../lib/base44";
 
 const BROADCAST_TOPIC = "gemeinde-stream.broadcast.v1";
 const encoder = new TextEncoder();
@@ -49,6 +50,20 @@ export function roleCanControlProgram(metadata?: string): boolean {
   }
 }
 
+interface ControllerCandidate { identity: string; metadata?: string; name?: string }
+
+export function electBroadcastController(candidates: ControllerCandidate[]): ControllerCandidate | null {
+  const rank = (metadata?: string) => {
+    try {
+      const role = (JSON.parse(metadata || "{}") as { role?: string }).role;
+      return role === "host" ? 0 : role === "cohost" ? 1 : role === "operator" ? 2 : 99;
+    } catch { return 99; }
+  };
+  return candidates
+    .filter((candidate) => roleCanControlProgram(candidate.metadata))
+    .sort((left, right) => rank(left.metadata) - rank(right.metadata) || left.identity.localeCompare(right.identity))[0] ?? null;
+}
+
 function isProgramState(value: unknown): value is BroadcastProgramState {
   if (!value || typeof value !== "object") return false;
   const state = value as Partial<BroadcastProgramState>;
@@ -69,10 +84,11 @@ function isProgramState(value: unknown): value is BroadcastProgramState {
     ));
 }
 
-export function useBroadcastCoordination(room: Room, connected: boolean, grantedControl: boolean) {
+export function useBroadcastCoordination(eventId: string, room: Room, connected: boolean, grantedControl: boolean) {
   const [programState, setProgramState] = useState<BroadcastProgramState | null>(null);
+  const [controller, setController] = useState<ControllerCandidate | null>(null);
   const stateRef = useRef<BroadcastProgramState | null>(null);
-  const canControl = useMemo(() => connected && grantedControl, [connected, grantedControl]);
+  const canControl = useMemo(() => connected && grantedControl && controller?.identity === room.localParticipant.identity, [connected, controller?.identity, grantedControl, room]);
 
   const publishWireMessage = useCallback(async (message: BroadcastWireMessage) => {
     await room.localParticipant.publishData(encoder.encode(JSON.stringify(message)), {
@@ -80,6 +96,39 @@ export function useBroadcastCoordination(room: Room, connected: boolean, granted
       topic: BROADCAST_TOPIC,
     });
   }, [room]);
+
+  useEffect(() => {
+    if (!connected) return;
+    let active = true;
+    void base44.functions.invoke("manage-program-state", { eventId, action: "get" }).then((response) => {
+      if (!active) return;
+      const payload = ((response as { data?: { state?: unknown } }).data ?? response) as { state?: unknown };
+      if (!isProgramState(payload.state)) return;
+      stateRef.current = payload.state;
+      setProgramState(payload.state);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [connected, eventId]);
+
+  useEffect(() => {
+    if (!connected) { setController(null); return; }
+    const updateController = () => {
+      const candidates: ControllerCandidate[] = [
+        { identity: room.localParticipant.identity, metadata: room.localParticipant.metadata, name: room.localParticipant.name },
+        ...[...room.remoteParticipants.values()].map((participant) => ({ identity: participant.identity, metadata: participant.metadata, name: participant.name })),
+      ];
+      setController(electBroadcastController(candidates));
+    };
+    updateController();
+    room.on(RoomEvent.ParticipantConnected, updateController);
+    room.on(RoomEvent.ParticipantDisconnected, updateController);
+    room.on(RoomEvent.ParticipantMetadataChanged, updateController);
+    return () => {
+      room.off(RoomEvent.ParticipantConnected, updateController);
+      room.off(RoomEvent.ParticipantDisconnected, updateController);
+      room.off(RoomEvent.ParticipantMetadataChanged, updateController);
+    };
+  }, [connected, room]);
 
   useEffect(() => {
     if (!connected) {
@@ -105,6 +154,9 @@ export function useBroadcastCoordination(room: Room, connected: boolean, granted
         }
         if (!isProgramState(message) || !roleCanControlProgram(participant?.metadata)) return;
         if (participant?.identity && message.controllerIdentity !== participant.identity) return;
+        if (participant?.identity !== controller?.identity) return;
+        const current = stateRef.current;
+        if (current && (message.updatedAt < current.updatedAt || (message.updatedAt === current.updatedAt && message.revision <= current.revision))) return;
 
         stateRef.current = message;
         setProgramState(message);
@@ -116,7 +168,7 @@ export function useBroadcastCoordination(room: Room, connected: boolean, granted
     room.on(RoomEvent.DataReceived, receive);
     if (!canControl) void publishWireMessage({ type: "request-program-state" });
     return () => { room.off(RoomEvent.DataReceived, receive); };
-  }, [canControl, connected, publishWireMessage, room]);
+  }, [canControl, connected, controller?.identity, publishWireMessage, room]);
 
   const take = useCallback(async (
     sourceIds: string[],
@@ -135,10 +187,11 @@ export function useBroadcastCoordination(room: Room, connected: boolean, granted
       sourceIds: sourceIds.slice(0, layout === "single" ? 1 : 2),
       overlay,
     };
+    await base44.functions.invoke("manage-program-state", { eventId, action: "save", state: nextState });
     stateRef.current = nextState;
     setProgramState(nextState);
     await publishWireMessage(nextState);
-  }, [canControl, publishWireMessage, room]);
+  }, [canControl, eventId, publishWireMessage, room]);
 
-  return { canControl, programState, take };
+  return { canControl, controllerIdentity: controller?.identity ?? null, controllerName: controller?.name || controller?.identity || null, programState, take };
 }

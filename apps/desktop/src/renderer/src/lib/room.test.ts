@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { mediaConnectionMessage, mediaServerScope } from "./room";
+import { describe, expect, it, vi } from "vitest";
+import { RoomEvent } from "livekit-client";
+import { MediaRoom, connectionStatusMessage, mediaConnectionMessage, mediaServerScope } from "./room";
 
 describe("media server diagnostics", () => {
   it("distinguishes local, private and public media servers", () => {
@@ -19,5 +20,28 @@ describe("media server diagnostics", () => {
   it("rejects an unencrypted public signaling address", () => {
     expect(mediaConnectionMessage(new Error("failed"), "ws://video.gemeinde.de"))
       .toContain("verschlüsselte WSS-Verbindung");
+  });
+});
+
+describe("connection recovery", () => {
+  it("reports interrupted signaling, media reconnection and successful recovery", () => {
+    const listener = vi.fn();
+    const media = new MediaRoom(listener);
+    media.room.emit(RoomEvent.Connected);
+    media.room.emit(RoomEvent.SignalReconnecting);
+    media.room.emit(RoomEvent.Reconnected);
+    media.room.emit(RoomEvent.Reconnecting);
+    media.room.emit(RoomEvent.Reconnected);
+    media.room.emit(RoomEvent.Disconnected);
+    expect(listener.mock.calls.map(([state]) => state)).toEqual([
+      "connected", "signal-reconnecting", "connected", "reconnecting", "connected", "disconnected",
+    ]);
+  });
+
+  it("never shows a stale success message during an outage", () => {
+    expect(connectionStatusMessage("reconnecting", "Verbunden")).toContain("unterbrochen");
+    expect(connectionStatusMessage("signal-reconnecting", "Verbunden")).toContain("Steuerverbindung");
+    expect(connectionStatusMessage("disconnected", "Verbunden")).toContain("getrennt");
+    expect(connectionStatusMessage("connected", "Verbunden")).toBe("Verbunden");
   });
 });

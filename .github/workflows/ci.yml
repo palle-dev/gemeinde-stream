@@ -1,4 +1,4 @@
-name: Prüfung und Windows-Build
+name: Desktop-Prüfung und Plattform-Builds
 
 on:
   push:
@@ -10,6 +10,68 @@ permissions:
   contents: read
 
 jobs:
+  verify-macos:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - name: Quellcode auschecken
+        uses: actions/checkout@v7
+      - name: Node.js einrichten
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Abhängigkeiten installieren
+        run: npm ci
+      - name: Typen prüfen
+        run: npm run typecheck
+      - name: Tests ausführen
+        run: npm test
+      - name: Desktop-Anwendung bauen
+        run: npm run build
+
+  package-macos:
+    if: github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            arch: x64
+            file_arch: x86_64
+          - runner: macos-15
+            arch: arm64
+            file_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Native macOS-Pakete bauen
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run dist:mac
+      - name: Anwendung und FFmpeg-Architektur prüfen
+        run: |
+          app_binary=$(find apps/desktop/release -path '*/Gemeinde Stream.app/Contents/MacOS/Gemeinde Stream' -type f | head -1)
+          ffmpeg_binary=$(find apps/desktop/release -path '*/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg' -type f | head -1)
+          test -n "$app_binary"
+          test -n "$ffmpeg_binary"
+          file "$app_binary" | grep '${{ matrix.file_arch }}'
+          file "$ffmpeg_binary" | grep '${{ matrix.file_arch }}'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gemeinde-stream-macos-${{ matrix.arch }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
   verify-and-package:
     runs-on: windows-latest
     timeout-minutes: 25

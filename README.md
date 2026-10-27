@@ -1,6 +1,6 @@
 # Gemeinde Stream
 
-Windows-Anwendung und Base44-Backend für zwei Betriebsarten:
+Professionelles macOS- und Windows-Studio mit Base44-Backend für zwei Betriebsarten:
 
 - **Meeting:** interaktive Räume mit Kamera, Mikrofon und Bildschirmfreigabe
 - **Broadcast:** rollenbasierte Master-Regie mit Vorschau, synchronisiertem Programmbild, Szenen und Remote-Quellen
@@ -27,11 +27,13 @@ Die Regie kann Bauchbinden mit Titel und Unterzeile vorbereiten. Die Vorschau ze
 
 Der Audiobereich der Live-Regie enthält einen echten lokalen Mixer für alle Remote-Mikrofone. Regie-Rollen sehen Live-Pegel, können Kanäle stummschalten und deren Wiedergabelautstärke für die Programmausgabe einstellen.
 
-Ein Live-Signalmonitor zeigt für jede Kamera- und Bildschirmquelle die tatsächlich empfangene Auflösung, Bildrate, Videobitrate und LiveKit-Verbindungsqualität. Eine Ampel warnt die Regie sofort, wenn eine Quelle unter 1080p50 fällt oder die Verbindung instabil wird.
+Ein Live-Signalmonitor zeigt für jede Kamera- und Bildschirmquelle die tatsächlich empfangene Auflösung, Bildrate, Videobitrate und LiveKit-Verbindungsqualität. Eine Ampel warnt die Regie sofort, wenn die Quelle das gewählte Produktionsprofil nicht zuverlässig erreicht oder die Verbindung instabil wird.
 
-Das geschaltete Programm lässt sich direkt aus der Regie als 1080p60-WebM-Datei mit 12 Mbit/s aufnehmen. Die lokale Aufzeichnung folgt allen TAKE- und Layoutwechseln, mischt die verbundenen Mikrofonspuren und schreibt die Daten fortlaufend an den gewählten Speicherort, damit lange Gottesdienste nicht vollständig im Arbeitsspeicher gehalten werden.
+Für unterschiedliche Leitungen und Rechner stehen drei abgestimmte Produktionsprofile bereit: 720p30 effizient, 1080p30 Standard und 1080p60 Qualität. Das geschaltete Programm lässt sich direkt aus der Regie als WebM-Datei im gewählten Profil aufnehmen. Die lokale Aufzeichnung folgt allen TAKE- und Layoutwechseln, mischt die verbundenen Mikrofonspuren und schreibt die Daten fortlaufend an den gewählten Speicherort, damit lange Gottesdienste nicht vollständig im Arbeitsspeicher gehalten werden.
 
-Die Regie kann dasselbe Programmsignal außerdem direkt per RTMP oder RTMPS mit 1080p60, H.264/AAC und 8 Mbit/s an YouTube, Facebook oder einen eigenen Streaming-Server senden. Serveradresse und Stream-Schlüssel werden nur lokal an den Electron-Hauptprozess übergeben und nicht gespeichert. Die benötigte FFmpeg-Engine wird mit der Windows-Anwendung ausgeliefert; `GEMEINDE_STREAM_FFMPEG` kann sie bei Bedarf durch eine eigene Version ersetzen.
+Die Regie kann dasselbe Programmsignal außerdem direkt per RTMP oder RTMPS mit H.264/AAC an bis zu fünf Ziele wie YouTube, Facebook oder einen eigenen Streaming-Server senden. Bitrate, Auflösung und Bildrate folgen dem Produktionsprofil. Serveradresse und Stream-Schlüssel werden nur lokal an den Electron-Hauptprozess übergeben und nicht gespeichert. Die benötigte FFmpeg-Engine wird mit der Desktop-Anwendung ausgeliefert; `GEMEINDE_STREAM_FFMPEG` kann sie bei Bedarf durch eine eigene Version ersetzen.
+
+Ein Produktionscheck prüft vor Aufnahme und Ausspielung Programmbild, Quellen, Netzwerkstatus, FFmpeg, freien Speicher sowie die grundlegende Rechnerausstattung. Kritische Probleme blockieren den Start und werden mit einer konkreten Handlungsempfehlung angezeigt.
 
 Vor dem Beitritt steht ein Vorraum mit Kameravorschau, Anzeigename sowie Auswahl von Kamera, Mikrofon und Lautsprecher bereit. Die persönlichen Geräte- und Ein/Aus-Einstellungen werden lokal für den nächsten Raum gespeichert.
 
@@ -41,7 +43,7 @@ In Meetings sehen alle Teilnehmer ihre Rollen. Host, Co-Host und Operator könne
 
 Meetings bieten eine umschaltbare Galerie- und Sprecheransicht. Die Sprecheransicht stellt geteilte Bildschirme automatisch auf die große Bühne, folgt ansonsten dem aktiven Sprecher und zeigt alle weiteren Teilnehmer in einer horizontalen Filmleiste.
 
-Host, Co-Host und Operator können auch normale Meetings lokal als 1080p60-WebM-Datei aufzeichnen. Die Aufnahme übernimmt die aktuell gewählte Galerie- oder Sprecheransicht, priorisiert Bildschirmfreigaben und mischt die Mikrofone aller verbundenen Teilnehmer; die Daten werden fortlaufend an den gewählten Speicherort geschrieben.
+Host, Co-Host und Operator können auch normale Meetings lokal im gewählten Produktionsprofil als WebM-Datei aufzeichnen. Die Aufnahme übernimmt die aktuell gewählte Galerie- oder Sprecheransicht, priorisiert Bildschirmfreigaben und mischt die Mikrofone aller verbundenen Teilnehmer; die Daten werden fortlaufend an den gewählten Speicherort geschrieben.
 
 Der Host kann verbundene Teilnehmer im Meeting und in der Live-Regie zu Co-Host, Operator, Sprecher, Teilnehmer oder Zuschauer ernennen. Die Änderung wird im Backend gespeichert; der betroffene Client trennt sich automatisch und erhält beim erneuten Beitritt ein LiveKit-Token mit den neuen Rechten. Zuschauer können weder Kamera, Mikrofon noch Bildschirm veröffentlichen.
 
@@ -53,7 +55,7 @@ Beim Beitritt des Hosts wechselt eine geplante Veranstaltung auf „Live“. Der
 - `base44/entities` – Räume, Mitgliedschaften, Geräte, Szenen und Organisationen
 - `base44/functions` – sicherer Raumbeitritt, Raumabfrage und LiveKit-Tokenausgabe
 - `infra/livekit` – Anleitung für den selbst gehosteten Produktionsserver
-- `.github/workflows` – automatische Prüfungen, Windows-Builds und Releases
+- `.github/workflows` – automatische Prüfungen, macOS-/Windows-Builds und signierte Releases
 
 ## Lokaler Start
 
@@ -64,7 +66,23 @@ Copy-Item .env.example .env.local
 npm run dev:local
 ```
 
-`dev:local` startet zuerst den lokalen LiveKit-Server und danach den Windows-Client im Entwicklungsmodus. Die Zugangsdaten bleiben ausschließlich in der von Git ignorierten Datei `.env.local`.
+`dev:local` startet zuerst den lokalen LiveKit-Server und danach den Desktop-Client im Entwicklungsmodus. Die Zugangsdaten bleiben ausschließlich in der von Git ignorierten Datei `.env.local`.
+
+### Entwicklung auf macOS
+
+LiveKit muss einmalig mit Homebrew installiert werden (`brew install livekit`). Danach gelten dieselben npm-Befehle wie unter Windows; die Plattform wird automatisch erkannt.
+
+```bash
+npm ci
+cp .env.example .env.local
+# LIVEKIT_API_KEY und LIVEKIT_API_SECRET durch eigene zufällige Werte ersetzen.
+# Falls noch nicht vorhanden, auch die Desktop-Konfiguration anlegen:
+cp apps/desktop/.env.example apps/desktop/.env.local
+npm run livekit:setup
+npm run dev:local
+```
+
+Vorhandene `.env.local`-Dateien beibehalten. Der Mac-Server bindet ausschließlich an `127.0.0.1` und ist für Tests auf demselben Mac vorgesehen. Protokolle und Prozess-ID liegen im ignorierten Verzeichnis `work/`. `npm run livekit:smoke` prüft den authentifizierten Zugriff auf den Server; Kamera, Mikrofon und Bildschirmfreigabe müssen zusätzlich in der Anwendung geprüft werden. Für diesen Entwicklungsstart ist kein Mac-Installer erforderlich.
 
 Der Medienserver kann auch separat verwaltet und geprüft werden:
 
@@ -82,13 +100,36 @@ Die lokale LiveKit-Adresse lautet `ws://localhost:7880`. Base44 muss während de
 
 ## Prüfungen
 
+### Schutz laufender Produktionen
+
+Während eine Aufnahme gespeichert wird oder ein RTMP-Stream aktiv ist, verhindert die Desktop-Anwendung das Schließen des Hauptfensters. Aufnahme und Streams müssen zuerst in der Oberfläche beendet werden.
+
+Aufnahmedaten werden geordnet und auch bei Teilschreibvorgängen vollständig geschrieben. Beim Abschluss werden die Daten synchronisiert und die Datei geschlossen. Bei einem Fehler oder Absturz des Oberflächenprozesses bleiben bereits geschriebene Daten am gewählten Speicherort erhalten; nur leere abgebrochene Dateien werden entfernt. Das ersetzt kein Backup: Eine unterbrochene WebM-Datei kann eine Reparatur benötigen, und ein Absturz des gesamten Prozesses oder ein Stromausfall kann die letzten Daten verlieren.
+
+Unterbrechungen der Medien- und Steuerverbindung werden getrennt angezeigt. LiveKit versucht die Verbindung automatisch wiederherzustellen; nach einer endgültigen Trennung bietet die Oberfläche einen erneuten Beitritt mit frisch angeforderten Zugangsdaten an.
+
+### Automatische Prüfung
+
 ```powershell
 npm run typecheck
 npm test
 npm run build
+npm audit
 ```
 
-Bei jedem Push auf `main` führt GitHub dieselben Prüfungen auf einem Windows-Runner aus und stellt den Installer 14 Tage als Build-Artefakt bereit. Ein Tag wie `v0.2.0` erzeugt zusätzlich ein dauerhaftes GitHub-Release, sofern Tag und Paketversion übereinstimmen.
+Bei jedem Push auf `main` und bei Pull Requests führt GitHub Typprüfung, Tests und Build unter macOS sowie die Prüfungen und den Installer-Build unter Windows aus. Bei Pushes werden macOS-Pakete für Intel und Apple Silicon sowie der Windows-Installer 14 Tage als Build-Artefakte bereitgestellt. Ein Tag wie `v0.2.0` erzeugt nach erfolgreicher Code-Signatur und macOS-Notarisierung zusätzlich ein dauerhaftes GitHub-Release, sofern Tag und Paketversion übereinstimmen.
+
+Unter **Einstellungen → Support & Diagnose** lässt sich ein Supportbericht mit Laufzeitdaten und den letzten maskierten Fehlerprotokollen exportieren. Zugangsdaten und RTMP-Stream-Schlüssel werden vor dem Schreiben entfernt.
+
+## Base44-Funktionen sicher veröffentlichen
+
+Die lokalen Entity-Dateien sind keine vollständige Kopie einer bereits befüllten Base44-App. Ein vollständiges `base44 deploy` könnte deshalb bestehende Entitäten entfernen. Für dieses Projekt wird ausschließlich die geprüfte Funktionsliste veröffentlicht:
+
+```bash
+npm run base44:deploy:functions
+```
+
+Der Befehl verändert keine Entity-Schemas oder vorhandenen Datensätze.
 
 ## LiveKit konfigurieren
 

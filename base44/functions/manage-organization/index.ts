@@ -64,11 +64,12 @@ Deno.serve(async (req) => {
 
     if (action === "register-device") {
       const deviceId = String(body.deviceId ?? "").trim().slice(0, 100);
-      const label = String(body.label ?? "Windows-PC").trim().slice(0, 120);
+      const platform = String(body.platform ?? "windows");
+      const label = String(body.label ?? (platform === "macos" ? "Mac" : "Windows-PC")).trim().slice(0, 120);
       const capabilities = Array.isArray(body.capabilities) ? body.capabilities.map(String).slice(0, 20) : [];
-      if (!deviceId || !label) return Response.json({ error: "Gerätedaten sind unvollständig" }, { status: 400 });
+      if (!deviceId || !label || !["windows", "macos"].includes(platform)) return Response.json({ error: "Gerätedaten sind unvollständig" }, { status: 400 });
       const existing = await base44.asServiceRole.entities.Device.filter({ device_id: deviceId, user_email: user.email });
-      const data = { organization_id: organization.id, device_id: deviceId, user_email: user.email, label, platform: "windows", app_version: String(body.appVersion ?? ""), last_seen_at: new Date().toISOString(), capabilities, status: "online" };
+      const data = { organization_id: organization.id, device_id: deviceId, user_email: user.email, label, platform, app_version: String(body.appVersion ?? ""), last_seen_at: new Date().toISOString(), capabilities, status: "online" };
       if (existing[0]) await base44.asServiceRole.entities.Device.update(existing[0].id, data); else await base44.asServiceRole.entities.Device.create(data);
       if (links[0]?.status === "invited") await base44.asServiceRole.entities.OrganizationMember.update(links[0].id, { status: "active" });
     }

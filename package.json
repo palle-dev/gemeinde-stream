@@ -9,13 +9,15 @@
   "scripts": {
     "build": "npm run build --workspace @gemeinde-stream/desktop",
     "dist:win": "npm run dist:win --workspace @gemeinde-stream/desktop",
+    "dist:mac": "npm run dist:mac --workspace @gemeinde-stream/desktop",
     "dev": "npm run dev --workspace @gemeinde-stream/desktop",
     "dev:local": "npm run livekit:start && npm run dev",
-    "livekit:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/livekit-local.ps1 Setup",
-    "livekit:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/livekit-local.ps1 Start",
-    "livekit:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/livekit-local.ps1 Stop",
-    "livekit:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/livekit-local.ps1 Status",
-    "livekit:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/livekit-local.ps1 Smoke",
+    "livekit:setup": "node scripts/livekit-local.mjs Setup",
+    "livekit:start": "node scripts/livekit-local.mjs Start",
+    "livekit:stop": "node scripts/livekit-local.mjs Stop",
+    "livekit:status": "node scripts/livekit-local.mjs Status",
+    "livekit:smoke": "node scripts/livekit-local.mjs Smoke",
+    "base44:deploy:functions": "node scripts/deploy-base44-functions.mjs",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
@@ -23,7 +25,7 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "base44": "^0.2.2",
+    "base44": "0.1.5",
     "livekit-server-sdk": "^2.19.2"
   }
 }

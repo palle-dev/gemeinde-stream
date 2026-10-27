@@ -1,0 +1,4 @@
+{
+  "name": "manage-program-state",
+  "entry": "index.ts"
+}

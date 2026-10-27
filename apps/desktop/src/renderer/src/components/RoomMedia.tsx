@@ -68,6 +68,7 @@ export function useRoomMedia(room: Room, connected: boolean): ParticipantMedia[]
       RoomEvent.ParticipantMetadataChanged,
       RoomEvent.ParticipantAttributesChanged,
       RoomEvent.ConnectionQualityChanged,
+      RoomEvent.Reconnected,
     ] as const;
 
     events.forEach((event) => room.on(event, refresh));
