@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createLocalAudioTrack, RemoteAudioTrack, Room, RoomEvent, Track, type LocalAudioTrack, type RemoteParticipant, type RemoteTrackPublication } from "livekit-client";
 import { Headphones, Mic } from "lucide-react";
+import { roleCanControlProgram } from "./BroadcastCoordination";
 
 const TALKBACK_TOPIC = "gemeinde-stream.talkback.v1";
 const TALKBACK_TRACK_NAME = "gemeinde-stream-talkback";
@@ -13,6 +14,10 @@ export function parseTalkbackMessage(payload: Uint8Array): TalkbackMessage | nul
     const value = JSON.parse(decoder.decode(payload)) as Partial<TalkbackMessage>;
     return typeof value.active === "boolean" ? { active: value.active } : null;
   } catch { return null; }
+}
+
+export function canSendTalkback(participant?: { metadata?: string }): boolean {
+  return roleCanControlProgram(participant?.metadata);
 }
 
 export function BroadcastTalkback({ room, connected, enabled, targets }: { room: Room; connected: boolean; enabled: boolean; targets: Array<{ identity: string; name: string }> }) {
@@ -32,7 +37,7 @@ export function BroadcastTalkback({ room, connected, enabled, targets }: { room:
       }
     };
     const attach = (track: unknown, publication: RemoteTrackPublication, participant: RemoteParticipant) => {
-      if (!(track instanceof RemoteAudioTrack) || publication.trackName !== TALKBACK_TRACK_NAME || !activeSenders.current.has(participant.identity)) return;
+      if (!(track instanceof RemoteAudioTrack) || publication.trackName !== TALKBACK_TRACK_NAME || !canSendTalkback(participant) || !activeSenders.current.has(participant.identity)) return;
       const key = `${participant.identity}:${track.sid}`;
       if (audioElements.current.has(key)) return;
       const element = document.createElement("audio"); element.autoplay = true; element.dataset.talkback = participant.identity;
@@ -40,7 +45,7 @@ export function BroadcastTalkback({ room, connected, enabled, targets }: { room:
       setReceivingFrom(participant.name || participant.identity);
     };
     const receive = (payload: Uint8Array, participant?: RemoteParticipant, _kind?: unknown, topic?: string) => {
-      if (topic !== TALKBACK_TOPIC || !participant) return;
+      if (topic !== TALKBACK_TOPIC || !participant || !canSendTalkback(participant)) return;
       const message = parseTalkbackMessage(payload); if (!message) return;
       if (message.active) activeSenders.current.add(participant.identity);
       else { activeSenders.current.delete(participant.identity); detachSender(participant.identity); setReceivingFrom(null); }

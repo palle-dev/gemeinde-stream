@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTalkbackMessage } from "./BroadcastTalkback";
+import { canSendTalkback, parseTalkbackMessage } from "./BroadcastTalkback";
 
 describe("broadcast talkback", () => {
   it("accepts only valid talkback state messages", () => {
@@ -7,5 +7,13 @@ describe("broadcast talkback", () => {
     expect(parseTalkbackMessage(encoder.encode('{"active":true}'))).toEqual({ active: true });
     expect(parseTalkbackMessage(encoder.encode('{"active":"yes"}'))).toBeNull();
     expect(parseTalkbackMessage(encoder.encode("invalid"))).toBeNull();
+  });
+
+  it("accepts talkback audio only from signed control roles", () => {
+    expect(canSendTalkback({ metadata: JSON.stringify({ role: "host" }) })).toBe(true);
+    expect(canSendTalkback({ metadata: JSON.stringify({ role: "operator" }) })).toBe(true);
+    expect(canSendTalkback({ metadata: JSON.stringify({ role: "speaker" }) })).toBe(false);
+    expect(canSendTalkback({ metadata: "invalid" })).toBe(false);
+    expect(canSendTalkback()).toBe(false);
   });
 });

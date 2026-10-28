@@ -18,6 +18,38 @@ export interface MeetingMessage {
 type WireMessage = Omit<MeetingMessage, "isLocal"> & { type: "chat" };
 type HandWireMessage = { type: "hand"; id: string; raised: boolean; sentAt: number };
 
+export function parseMeetingMessage(
+  payload: Uint8Array,
+  participant?: { identity: string; name?: string },
+): MeetingMessage | null {
+  if (!participant?.identity) return null;
+  try {
+    const message = JSON.parse(decoder.decode(payload)) as Partial<WireMessage>;
+    if (
+      message.type !== "chat" ||
+      typeof message.id !== "string" ||
+      message.id.length < 1 ||
+      message.id.length > 100 ||
+      typeof message.text !== "string" ||
+      !message.text.trim() ||
+      message.text.length > 2_000 ||
+      typeof message.sentAt !== "number" ||
+      !Number.isFinite(message.sentAt)
+    )
+      return null;
+    return {
+      id: message.id,
+      senderIdentity: participant.identity,
+      senderName: participant.name || participant.identity,
+      text: message.text,
+      sentAt: message.sentAt,
+      isLocal: false,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function useMeetingChat(room: Room, connected: boolean, localName: string) {
   const [messages, setMessages] = useState<MeetingMessage[]>([]);
 
@@ -26,20 +58,11 @@ export function useMeetingChat(room: Room, connected: boolean, localName: string
 
     const receive = (payload: Uint8Array, participant?: { identity: string; name?: string }, _kind?: unknown, topic?: string) => {
       if (topic !== CHAT_TOPIC) return;
-      try {
-        const message = JSON.parse(decoder.decode(payload)) as WireMessage;
-        if (message.type !== "chat" || !message.id || !message.text) return;
-        setMessages((current) => current.some((item) => item.id === message.id)
-          ? current
-          : [...current, {
-              ...message,
-              senderIdentity: participant?.identity || message.senderIdentity,
-              senderName: participant?.name || message.senderName,
-              isLocal: false,
-            }].slice(-100));
-      } catch {
-        // Ignore data packets from other features or older clients.
-      }
+      const message = parseMeetingMessage(payload, participant);
+      if (!message) return;
+      setMessages((current) => current.some((item) => item.id === message.id)
+        ? current
+        : [...current, message].slice(-100));
     };
 
     room.on(RoomEvent.DataReceived, receive);
