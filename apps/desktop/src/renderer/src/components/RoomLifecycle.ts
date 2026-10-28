@@ -12,6 +12,10 @@ interface EndRoomMessage {
   sentAt: number;
 }
 
+export function shouldBroadcastRoomEnd(roomClosedByServer: unknown): boolean {
+  return roomClosedByServer !== true;
+}
+
 export function useRoomLifecycle(room: Room, connected: boolean, localRole: ParticipantRole, onEnded: () => void) {
   useEffect(() => {
     if (!connected) return;

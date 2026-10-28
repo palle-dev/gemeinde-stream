@@ -40,6 +40,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "end") {
+      let roomClosedByServer = false;
       if (event.status !== "ended") {
         const apiKey = Deno.env.get("LIVEKIT_API_KEY");
         const apiSecret = Deno.env.get("LIVEKIT_API_SECRET");
@@ -51,10 +52,11 @@ Deno.serve(async (req) => {
           } catch (error) {
             if (!String(error).toLowerCase().includes("not found")) throw error;
           }
+          roomClosedByServer = true;
         }
       }
       const updated = event.status === "ended" ? event : await base44.asServiceRole.entities.Event.update(event.id, { status: "ended" });
-      return Response.json({ event: updated });
+      return Response.json({ event: updated, roomClosedByServer });
     }
 
     if (action === "delete") {

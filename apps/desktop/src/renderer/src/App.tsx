@@ -74,7 +74,10 @@ import {
   useMeetingModeration,
   type ParticipantRole,
 } from "./components/MeetingModeration";
-import { useRoomLifecycle } from "./components/RoomLifecycle";
+import {
+  shouldBroadcastRoomEnd,
+  useRoomLifecycle,
+} from "./components/RoomLifecycle";
 import {
   useRoomRoleManagement,
   type AssignableRole,
@@ -1591,12 +1594,18 @@ function Studio({
       return;
     try {
       setMediaMessage("Veranstaltung wird beendet …");
-      await base44.functions.invoke("manage-event", {
-        eventId: event.id,
-        action: "end",
-      });
-      await broadcastEnd();
-      await media.disconnect();
+      const result = unwrap(
+        (await base44.functions.invoke("manage-event", {
+          eventId: event.id,
+          action: "end",
+        })) as FunctionEnvelope<{
+          event: EventRecord;
+          roomClosedByServer?: boolean;
+        }>,
+      );
+      if (shouldBroadcastRoomEnd(result.roomClosedByServer))
+        await broadcastEnd().catch(() => undefined);
+      await media.disconnect().catch(() => undefined);
       onLeave();
     } catch (error) {
       setMediaMessage(messageOf(error));
