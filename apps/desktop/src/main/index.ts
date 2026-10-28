@@ -755,8 +755,8 @@ function createWindow(): void {
   const window = new BrowserWindow({
     width: 1500,
     height: 930,
-    minWidth: 1100,
-    minHeight: 720,
+    minWidth: 800,
+    minHeight: 500,
     backgroundColor: "#080b10",
     title: "Gemeinde Stream",
     webPreferences: {

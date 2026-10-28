@@ -409,6 +409,7 @@ export function MultiProgramStreamer({
             <div className="stream-profile-heading">
               <input
                 type="checkbox"
+                aria-label={`${profile.label || "Streamingziel"} aktivieren`}
                 checked={profile.enabled}
                 onChange={(event) =>
                   update(profile.id, { enabled: event.target.checked })
@@ -416,6 +417,7 @@ export function MultiProgramStreamer({
                 disabled={locked}
               />
               <select
+                aria-label={`Plattform für ${profile.label || "Streamingziel"}`}
                 value={profile.platform}
                 onChange={(event) =>
                   setPlatform(profile, event.target.value as StreamPlatform)
@@ -429,6 +431,8 @@ export function MultiProgramStreamer({
               {profiles.length > 1 && (
                 <button
                   type="button"
+                  aria-label={`${profile.label || "Streamingziel"} entfernen`}
+                  title="Streamingziel entfernen"
                   onClick={() => remove(profile.id)}
                   disabled={locked}
                 >
@@ -437,6 +441,7 @@ export function MultiProgramStreamer({
               )}
             </div>
             <input
+              aria-label="Bezeichnung des Streamingziels"
               value={profile.label}
               onChange={(event) =>
                 update(profile.id, { label: event.target.value })
@@ -445,6 +450,7 @@ export function MultiProgramStreamer({
               disabled={locked}
             />
             <input
+              aria-label={`Serveradresse für ${profile.label || "Streamingziel"}`}
               value={profile.serverUrl}
               onChange={(event) =>
                 update(profile.id, { serverUrl: event.target.value })
@@ -454,6 +460,7 @@ export function MultiProgramStreamer({
             />
             <input
               type="password"
+              aria-label={`Stream-Schlüssel für ${profile.label || "Streamingziel"}`}
               value={profile.streamKey}
               onChange={(event) =>
                 update(profile.id, { streamKey: event.target.value })

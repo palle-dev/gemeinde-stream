@@ -189,6 +189,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
             {promptRequest.message && <p>{promptRequest.message}</p>}
             <input
               autoFocus
+              aria-label={promptRequest.title}
               value={promptValue}
               onChange={(event) => setPromptValue(event.target.value)}
               placeholder={promptRequest.placeholder}

@@ -575,6 +575,7 @@ export function OrganizationAdmin({
                 </small>
               </div>
               <select
+                aria-label={`Rolle von ${member.display_name}`}
                 value={member.role}
                 disabled={
                   !canAdmin || member.email === data.organization?.owner_email
@@ -593,7 +594,11 @@ export function OrganizationAdmin({
                 ))}
               </select>
               {canAdmin && member.email !== data.organization?.owner_email && (
-                <button onClick={() => void removeMember(member)}>
+                <button
+                  aria-label={`${member.display_name} aus dem Team entfernen`}
+                  title="Teammitglied entfernen"
+                  onClick={() => void removeMember(member)}
+                >
                   <Trash2 />
                 </button>
               )}
@@ -623,7 +628,19 @@ export function OrganizationAdmin({
                   <span>{device.capabilities?.join(" · ")}</span>
                 </div>
                 {canAdmin && (
-                  <button onClick={() => void toggleDevice(device)}>
+                  <button
+                    aria-label={
+                      device.status === "disabled"
+                        ? `${device.label} aktivieren`
+                        : `${device.label} deaktivieren`
+                    }
+                    title={
+                      device.status === "disabled"
+                        ? "Gerät aktivieren"
+                        : "Gerät deaktivieren"
+                    }
+                    onClick={() => void toggleDevice(device)}
+                  >
                     {device.status === "disabled" ? (
                       <ShieldCheck />
                     ) : (

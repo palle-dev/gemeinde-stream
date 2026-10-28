@@ -695,6 +695,7 @@ function Dashboard({
                   <span>Meeting- oder Produktionscode eingeben</span>
                 </div>
                 <input
+                  aria-label="Raumcode"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                   placeholder="RAUMCODE"
@@ -1989,6 +1990,7 @@ function MeetingCanvas({
                     !participant.isLocal &&
                     participant.role !== "host" ? (
                       <select
+                        aria-label={`Rolle von ${participant.name}`}
                         className="role-select"
                         value={participant.role}
                         onChange={(event) =>
@@ -2109,6 +2111,7 @@ function MeetingCanvas({
             </div>
             <form className="chat-form" onSubmit={submitChat}>
               <input
+                aria-label="Chatnachricht"
                 value={chatText}
                 onChange={(event) => setChatText(event.target.value)}
                 placeholder="Nachricht schreiben …"
@@ -2681,6 +2684,7 @@ function BroadcastCanvas({
           </div>
           <div className="graphics-fields">
             <input
+              aria-label="Titel der Einblendung"
               value={overlayTitle}
               onChange={(event) => setOverlayTitle(event.target.value)}
               placeholder="Name oder Titel"
@@ -2688,6 +2692,7 @@ function BroadcastCanvas({
               disabled={!canControl}
             />
             <input
+              aria-label="Unterzeile der Einblendung"
               value={overlaySubtitle}
               onChange={(event) => setOverlaySubtitle(event.target.value)}
               placeholder="Funktion, Thema oder Hinweis"
