@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createLocalAudioTrack, RemoteAudioTrack, Room, RoomEvent, Track, type LocalAudioTrack, type RemoteParticipant, type RemoteTrackPublication } from "livekit-client";
+import { createLocalAudioTrack, RemoteAudioTrack, Room, RoomEvent, Track, type LocalAudioTrack, type ParticipantTrackPermission, type RemoteParticipant, type RemoteTrackPublication } from "livekit-client";
 import { Headphones, Mic } from "lucide-react";
 import { roleCanControlProgram } from "./BroadcastCoordination";
 
@@ -20,13 +20,41 @@ export function canSendTalkback(participant?: { metadata?: string }): boolean {
   return roleCanControlProgram(participant?.metadata);
 }
 
+export function talkbackSubscriptionPermissions(
+  targetIdentity: string,
+  participantIdentities: string[],
+  normalTrackSids: string[],
+): ParticipantTrackPermission[] {
+  return [...new Set(participantIdentities)].map((participantIdentity) =>
+    participantIdentity === targetIdentity
+      ? { participantIdentity, allowAll: true }
+      : { participantIdentity, allowedTrackSids: normalTrackSids },
+  );
+}
+
 export function BroadcastTalkback({ room, connected, enabled, targets }: { room: Room; connected: boolean; enabled: boolean; targets: Array<{ identity: string; name: string }> }) {
   const [activeTarget, setActiveTarget] = useState<string | null>(null);
   const [receivingFrom, setReceivingFrom] = useState<string | null>(null);
   const [error, setError] = useState("");
   const localTrack = useRef<LocalAudioTrack | null>(null);
+  const activeTargetRef = useRef<string | null>(null);
   const activeSenders = useRef(new Set<string>());
   const audioElements = useRef(new Map<string, HTMLAudioElement>());
+
+  const applyTalkbackPermissions = (targetIdentity: string) => {
+    const normalTrackSids = [...room.localParticipant.trackPublications.values()]
+      .filter((publication) => publication.trackName !== TALKBACK_TRACK_NAME)
+      .map((publication) => publication.trackSid)
+      .filter((trackSid): trackSid is string => Boolean(trackSid));
+    room.localParticipant.setTrackSubscriptionPermissions(
+      false,
+      talkbackSubscriptionPermissions(
+        targetIdentity,
+        [...room.remoteParticipants.keys()],
+        normalTrackSids,
+      ),
+    );
+  };
 
   useEffect(() => {
     if (!connected) return;
@@ -66,28 +94,72 @@ export function BroadcastTalkback({ room, connected, enabled, targets }: { room:
     };
   }, [connected, room]);
 
+  useEffect(() => {
+    if (!connected) return;
+    const refreshPermissions = () => {
+      if (activeTargetRef.current)
+        applyTalkbackPermissions(activeTargetRef.current);
+    };
+    room.on(RoomEvent.ParticipantConnected, refreshPermissions);
+    room.on(RoomEvent.ParticipantDisconnected, refreshPermissions);
+    room.on(RoomEvent.LocalTrackPublished, refreshPermissions);
+    room.on(RoomEvent.LocalTrackUnpublished, refreshPermissions);
+    return () => {
+      room.off(RoomEvent.ParticipantConnected, refreshPermissions);
+      room.off(RoomEvent.ParticipantDisconnected, refreshPermissions);
+      room.off(RoomEvent.LocalTrackPublished, refreshPermissions);
+      room.off(RoomEvent.LocalTrackUnpublished, refreshPermissions);
+    };
+  }, [connected, room]);
+
   async function start(identity: string) {
-    if (!connected || !enabled || localTrack.current) return;
+    if (!connected || !enabled || localTrack.current || activeTargetRef.current) return;
+    activeTargetRef.current = identity;
+    let track: LocalAudioTrack | null = null;
     try {
-      const track = await createLocalAudioTrack({ echoCancellation: true, noiseSuppression: true, autoGainControl: true });
+      track = await createLocalAudioTrack({ echoCancellation: true, noiseSuppression: true, autoGainControl: true });
+      if (activeTargetRef.current !== identity) {
+        track.stop();
+        return;
+      }
+      localTrack.current = track;
+      applyTalkbackPermissions(identity);
       await room.localParticipant.publishTrack(track, { name: TALKBACK_TRACK_NAME, source: Track.Source.Unknown });
-      localTrack.current = track; setActiveTarget(identity); setError("");
+      if (activeTargetRef.current !== identity) {
+        await room.localParticipant.unpublishTrack(track, true).catch(() => undefined);
+        track.stop();
+        if (localTrack.current === track) localTrack.current = null;
+        room.localParticipant.setTrackSubscriptionPermissions(true);
+        return;
+      }
+      setActiveTarget(identity); setError("");
       await room.localParticipant.publishData(encoder.encode(JSON.stringify({ active: true })), { reliable: true, topic: TALKBACK_TOPIC, destinationIdentities: [identity] });
     } catch (cause) {
-      localTrack.current?.stop(); localTrack.current = null; setActiveTarget(null);
+      if (activeTargetRef.current === identity) activeTargetRef.current = null;
+      if (track) {
+        await room.localParticipant.unpublishTrack(track, true).catch(() => undefined);
+        track.stop();
+      }
+      if (localTrack.current === track) localTrack.current = null;
+      room.localParticipant.setTrackSubscriptionPermissions(true);
+      setActiveTarget(null);
       setError(cause instanceof Error ? cause.message : "Talkback konnte nicht gestartet werden.");
     }
   }
 
   async function stop() {
-    const identity = activeTarget; const track = localTrack.current;
-    if (!identity || !track) return;
-    localTrack.current = null; setActiveTarget(null);
-    await room.localParticipant.publishData(encoder.encode(JSON.stringify({ active: false })), { reliable: true, topic: TALKBACK_TOPIC, destinationIdentities: [identity] }).catch(() => undefined);
-    await room.localParticipant.unpublishTrack(track, true).catch(() => undefined); track.stop();
+    const identity = activeTargetRef.current; const track = localTrack.current;
+    activeTargetRef.current = null; localTrack.current = null; setActiveTarget(null);
+    if (identity)
+      await room.localParticipant.publishData(encoder.encode(JSON.stringify({ active: false })), { reliable: true, topic: TALKBACK_TOPIC, destinationIdentities: [identity] }).catch(() => undefined);
+    if (track) {
+      await room.localParticipant.unpublishTrack(track, true).catch(() => undefined);
+      track.stop();
+    }
+    room.localParticipant.setTrackSubscriptionPermissions(true);
   }
 
-  useEffect(() => () => { const track = localTrack.current; if (track) { void room.localParticipant.unpublishTrack(track, true); track.stop(); } }, [room]);
+  useEffect(() => () => { const track = localTrack.current; activeTargetRef.current = null; room.localParticipant.setTrackSubscriptionPermissions(true); if (track) { void room.localParticipant.unpublishTrack(track, true); track.stop(); } }, [room]);
 
   return <section className="talkback-panel"><div><span><Headphones /><b>Talkback</b></span>{receivingFrom && <small>Regie spricht: {receivingFrom}</small>}</div>{targets.length > 0 ? targets.map((target) => <button key={target.identity} className={activeTarget === target.identity ? "active" : ""} disabled={!connected || !enabled || Boolean(activeTarget && activeTarget !== target.identity)} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); void start(target.identity); }} onPointerUp={() => void stop()} onPointerCancel={() => void stop()}><Mic /><span><b>{target.name}</b><small>{activeTarget === target.identity ? "SPRECHEN …" : "Gedrückt halten"}</small></span></button>) : <p>Keine entfernte Quelle verbunden.</p>}{error && <div className="inline-error">{error}</div>}</section>;
 }

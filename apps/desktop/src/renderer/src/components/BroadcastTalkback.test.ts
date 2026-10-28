@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { canSendTalkback, parseTalkbackMessage } from "./BroadcastTalkback";
+import {
+  canSendTalkback,
+  parseTalkbackMessage,
+  talkbackSubscriptionPermissions,
+} from "./BroadcastTalkback";
 
 describe("broadcast talkback", () => {
   it("accepts only valid talkback state messages", () => {
@@ -15,5 +19,21 @@ describe("broadcast talkback", () => {
     expect(canSendTalkback({ metadata: JSON.stringify({ role: "speaker" }) })).toBe(false);
     expect(canSendTalkback({ metadata: "invalid" })).toBe(false);
     expect(canSendTalkback()).toBe(false);
+  });
+
+  it("exposes the private track only to its selected destination", () => {
+    expect(
+      talkbackSubscriptionPermissions(
+        "speaker",
+        ["speaker", "viewer", "viewer"],
+        ["camera-sid", "microphone-sid"],
+      ),
+    ).toEqual([
+      { participantIdentity: "speaker", allowAll: true },
+      {
+        participantIdentity: "viewer",
+        allowedTrackSids: ["camera-sid", "microphone-sid"],
+      },
+    ]);
   });
 });
