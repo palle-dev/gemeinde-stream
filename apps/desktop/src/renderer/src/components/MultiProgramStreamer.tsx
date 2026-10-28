@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CircleStop, Plus, Radio, Trash2 } from "lucide-react";
 import { ConnectionState, type Room } from "livekit-client";
 import type { BroadcastProgramState } from "./BroadcastCoordination";
@@ -110,6 +110,7 @@ export function MultiProgramStreamer({
   const sessionRef = useRef<ProgramMediaSession | null>(null);
   const writesRef = useRef(Promise.resolve());
   const activeRef = useRef(new Set<string>());
+  const failureRef = useRef(false);
   const programRef = useRef({ programState, sources, audioMix });
   const { profile, setProfile } = useProductionProfile();
   const preflight = useProductionPreflight({
@@ -136,6 +137,33 @@ export function MultiProgramStreamer({
     );
     return () => clearInterval(timer);
   }, [status]);
+
+  const releaseStreamingSession = useCallback(() => {
+    const recorder = recorderRef.current;
+    recorderRef.current = null;
+    if (recorder?.state === "recording") recorder.stop();
+    sessionRef.current?.cleanup();
+    sessionRef.current = null;
+    activeRef.current.clear();
+    setActiveIds([]);
+    setLiveIds([]);
+  }, []);
+
+  const failStreaming = useCallback(
+    (message: string) => {
+      if (failureRef.current) return;
+      failureRef.current = true;
+      releaseStreamingSession();
+      setErrors((current) => ({ ...current, general: message }));
+      setStatus("stopping");
+      void window.desktop
+        .cancelStream()
+        .catch(() => undefined)
+        .finally(() => setStatus("error"));
+    },
+    [releaseStreamingSession],
+  );
+
   useEffect(
     () =>
       window.desktop.onStreamStatus((next) => {
@@ -156,25 +184,18 @@ export function MultiProgramStreamer({
         setLiveIds((current) => current.filter((id) => id !== next.targetId));
         setActiveIds([...activeRef.current]);
         setErrors((current) => ({ ...current, [next.targetId]: next.message }));
-        if (!activeRef.current.size) {
-          if (recorderRef.current?.state === "recording")
-            recorderRef.current.stop();
-          sessionRef.current?.cleanup();
-          recorderRef.current = null;
-          sessionRef.current = null;
-          setStatus("error");
-        }
+        if (!activeRef.current.size)
+          failStreaming("Alle Streaming-Ziele sind ausgefallen.");
       }),
-    [],
+    [failStreaming],
   );
   useEffect(
     () => () => {
-      if (recorderRef.current?.state === "recording")
-        recorderRef.current.stop();
-      sessionRef.current?.cleanup();
+      failureRef.current = true;
+      releaseStreamingSession();
       void window.desktop.cancelStream();
     },
-    [],
+    [releaseStreamingSession],
   );
   const update = (id: string, values: Partial<StreamProfile>) =>
     setProfiles((current) =>
@@ -227,6 +248,7 @@ export function MultiProgramStreamer({
       });
       return;
     }
+    failureRef.current = false;
     setStatus("starting");
     setErrors({});
     try {
@@ -267,37 +289,28 @@ export function MultiProgramStreamer({
       recorderRef.current = recorder;
       writesRef.current = Promise.resolve();
       recorder.addEventListener("dataavailable", (event) => {
-        if (!event.data.size) return;
+        if (!event.data.size || failureRef.current) return;
         writesRef.current = writesRef.current
           .then(async () =>
             window.desktop.appendStream(await event.data.arrayBuffer()),
           )
           .catch((cause) => {
-            setErrors({
-              general:
-                cause instanceof Error
-                  ? cause.message
-                  : "Alle Streaming-Ziele sind ausgefallen.",
-            });
-            setStatus("error");
-            session.cleanup();
-            void window.desktop.cancelStream();
+            failStreaming(
+              cause instanceof Error
+                ? cause.message
+                : "Alle Streaming-Ziele sind ausgefallen.",
+            );
           });
       });
       recorder.addEventListener("error", () => {
-        setErrors({
-          general: "Die Programmkodierung wurde unerwartet beendet.",
-        });
-        setStatus("error");
-        session.cleanup();
-        void window.desktop.cancelStream();
+        failStreaming("Die Programmkodierung wurde unerwartet beendet.");
       });
       recorder.start(500);
       setElapsed(0);
       setStatus("streaming");
     } catch (cause) {
-      sessionRef.current?.cleanup();
-      sessionRef.current = null;
+      failureRef.current = true;
+      releaseStreamingSession();
       await window.desktop.cancelStream().catch(() => undefined);
       setErrors({
         general:
@@ -319,16 +332,13 @@ export function MultiProgramStreamer({
       });
       await writesRef.current;
       await window.desktop.finishStream();
-      sessionRef.current?.cleanup();
-      recorderRef.current = null;
-      sessionRef.current = null;
-      activeRef.current.clear();
-      setActiveIds([]);
-      setLiveIds([]);
+      releaseStreamingSession();
+      failureRef.current = false;
       setStatus("idle");
     } catch (cause) {
+      failureRef.current = true;
       await window.desktop.cancelStream().catch(() => undefined);
-      sessionRef.current?.cleanup();
+      releaseStreamingSession();
       setErrors({
         general:
           cause instanceof Error
