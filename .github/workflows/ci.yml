@@ -57,14 +57,27 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm run dist:mac
-      - name: Anwendung und FFmpeg-Architektur prüfen
+      - name: macOS-Pakete und Bundle prüfen
         run: |
+          app_bundle=$(find apps/desktop/release -name 'Gemeinde Stream.app' -type d | head -1)
           app_binary=$(find apps/desktop/release -path '*/Gemeinde Stream.app/Contents/MacOS/Gemeinde Stream' -type f | head -1)
           ffmpeg_binary=$(find apps/desktop/release -path '*/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg' -type f | head -1)
+          package_version=$(node -p "require('./apps/desktop/package.json').version")
+          test -n "$app_bundle"
           test -n "$app_binary"
           test -n "$ffmpeg_binary"
+          test -x "$app_binary"
+          test -x "$ffmpeg_binary"
           file "$app_binary" | grep '${{ matrix.file_arch }}'
           file "$ffmpeg_binary" | grep '${{ matrix.file_arch }}'
+          test "$(plutil -extract CFBundleIdentifier raw "$app_bundle/Contents/Info.plist")" = "de.gemeinde.stream"
+          test "$(plutil -extract CFBundleShortVersionString raw "$app_bundle/Contents/Info.plist")" = "$package_version"
+          for package in apps/desktop/release/*.dmg; do
+            hdiutil verify -quiet "$package"
+          done
+          for package in apps/desktop/release/*.zip; do
+            unzip -tqq "$package"
+          done
       - uses: actions/upload-artifact@v7
         with:
           name: gemeinde-stream-macos-${{ matrix.arch }}
