@@ -23,6 +23,8 @@ jobs:
           cache: npm
       - name: Abhängigkeiten installieren
         run: npm ci
+      - name: Abhängigkeiten auf bekannte Schwachstellen prüfen
+        run: npm audit --audit-level=high
       - name: Typen prüfen
         run: npm run typecheck
       - name: Tests ausführen
@@ -53,6 +55,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Abhängigkeiten auf bekannte Schwachstellen prüfen
+        run: npm audit --audit-level=high
       - name: Native macOS-Pakete bauen
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
@@ -103,6 +107,9 @@ jobs:
 
       - name: Abhängigkeiten installieren
         run: npm ci
+
+      - name: Abhängigkeiten auf bekannte Schwachstellen prüfen
+        run: npm audit --audit-level=high
 
       - name: Typen prüfen
         run: npm run typecheck

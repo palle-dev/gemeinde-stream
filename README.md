@@ -59,6 +59,8 @@ Beim Beitritt des Hosts wechselt eine geplante Veranstaltung auf „Live“. Der
 
 ## Lokaler Start
 
+Voraussetzung ist Node.js 22.12 oder neuer.
+
 ```powershell
 npm install
 Copy-Item .env.example .env.local
@@ -125,6 +127,12 @@ npm run stream:smoke
 ```
 
 Bei jedem Push auf `main` und bei Pull Requests führt GitHub Typprüfung, Tests und Build unter macOS sowie die Prüfungen und den Installer-Build unter Windows aus. Bei Pushes werden macOS-Pakete für Intel und Apple Silicon sowie der Windows-Installer 14 Tage als Build-Artefakte bereitgestellt. Ein Tag wie `v0.3.0` erzeugt nach erfolgreicher Code-Signatur und macOS-Notarisierung zusätzlich ein dauerhaftes GitHub-Release, sofern Tag und Paketversion übereinstimmen.
+
+Die npm-Lieferkette verwendet eine strikte Freigabeliste für Installationsskripte.
+Nur die im Root-`package.json` exakt gepinnten und geprüften Pakete dürfen während
+`npm ci` Code ausführen; neue oder geänderte Skripte stoppen die Installation.
+Zusätzlich blockieren CI und Release bekannte Schwachstellen mit hohem oder
+kritischem Schweregrad.
 
 Unter **Einstellungen → Support & Diagnose** lässt sich ein Supportbericht mit Laufzeitdaten und den letzten maskierten Fehlerprotokollen exportieren. Zugangsdaten und RTMP-Stream-Schlüssel werden vor dem Schreiben entfernt.
 

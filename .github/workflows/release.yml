@@ -31,6 +31,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Abhängigkeiten auf bekannte Schwachstellen prüfen
+        run: npm audit --audit-level=high
       - name: Windows-Signaturkonfiguration prüfen
         shell: pwsh
         run: |
@@ -85,6 +87,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Abhängigkeiten auf bekannte Schwachstellen prüfen
+        run: npm audit --audit-level=high
       - name: Signaturkonfiguration prüfen
         run: |
           test -n "$CSC_LINK"

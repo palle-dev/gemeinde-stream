@@ -54,6 +54,8 @@ Ein Release wird nur veröffentlicht, wenn alle folgenden Prüfungen erfolgreich
 sind:
 
 - Typprüfung, Unit-/Integrationstests und RTMP-End-to-End-Smoke-Test
+- keine bekannten Schwachstellen mit hohem oder kritischem Schweregrad
+- ausschließlich explizit geprüfte, versionsgebundene npm-Installationsskripte
 - gültige Authenticode-Signatur des Windows-Installers
 - strikte macOS-Code-Signaturprüfung
 - Gatekeeper-Bewertung der macOS-App
