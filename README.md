@@ -159,6 +159,8 @@ Für Aufbau, Startreihenfolge, Störungsmaßnahmen und Nachbereitung einer echte
 Übertragung gilt das [Produktions-Runbook](docs/PRODUCTION-RUNBOOK.md).
 Der Ablauf für signierte, notarisierte Desktop-Pakete ist unter
 [Signiertes Desktop-Release](docs/RELEASE.md) beschrieben.
+Die verbindliche Generalprobe und Freigabe wird im
+[Abnahmeprotokoll](docs/ACCEPTANCE.md) dokumentiert.
 
 ## Sicherheitsmodell
 

@@ -31,7 +31,10 @@ Workflowdateien oder Chatnachrichten einfügen.
    `npm run stream:smoke` ausführen.
 4. Einen internen Testgottesdienst nach
    [`PRODUCTION-RUNBOOK.md`](PRODUCTION-RUNBOOK.md) durchführen.
-5. Änderungen committen und `main` erneut vollständig prüfen lassen.
+5. Die Ergebnisse im
+   [`Abnahmeprotokoll`](ACCEPTANCE.md) festhalten. Eine nicht vollständig
+   bestandene Abnahme blockiert die öffentliche Freigabe.
+6. Änderungen committen und `main` erneut vollständig prüfen lassen.
 
 ## Release auslösen
 
@@ -68,7 +71,9 @@ sind:
    Entwickler zeigt.
 4. Anmeldung, Gerätefreigaben, Raumbeitritt, Aufnahme und einen privaten
    RTMPS-Teststream auf beiden Betriebssystemen prüfen.
-5. Erst danach die Version an das Produktionsteam verteilen.
+5. Das Abnahmeprotokoll abschließen und von Technik, Regie sowie der
+   verantwortlichen Gemeinde freigeben lassen.
+6. Erst danach die Version an das Produktionsteam verteilen.
 
 Bei einem fehlgeschlagenen Gate wird kein GitHub-Release veröffentlicht. Fehler
 werden behoben und mit einer neuen Versionsnummer beziehungsweise einem neuen Tag
