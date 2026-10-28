@@ -132,9 +132,10 @@ Deno.serve(async (req) => {
           if (!isMissing(error)) throw error;
         }
       }
-      const changes = action === "mute" ? { can_publish_audio: false } : { can_publish_video: false };
-      const updated = await base44.asServiceRole.entities.RoomMember.update(member.id, changes);
-      return Response.json({ member: updated });
+      // Muting is a one-time moderation action, not a permanent permission
+      // revocation. Persisted publish grants must remain intact so the person
+      // can enable the device again and receives normal grants on reconnect.
+      return Response.json({ member, moderated: true });
     }
 
     if (action === "admit" || action === "reject") {
