@@ -35,6 +35,7 @@ jobs:
         run: npm run build
 
   package-macos:
+    needs: verify-macos
     if: github.event_name == 'push'
     strategy:
       fail-fast: false
