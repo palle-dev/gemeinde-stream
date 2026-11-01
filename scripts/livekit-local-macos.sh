@@ -4,16 +4,29 @@ cd "$(dirname "$0")/.."
 project_root="$PWD"
 pid_file="$project_root/work/livekit-macos.pid"
 server_bin="$(command -v livekit-server || true)"
+server_args=(--bind 127.0.0.1 --node-ip 127.0.0.1 --rtc.enable_loopback_candidate)
 
 reachable() { nc -z -w 1 127.0.0.1 7880 >/dev/null 2>&1; }
+managed_pid() {
+  local candidate_pid="$1"
+  [[ "$candidate_pid" =~ ^[0-9]+$ ]] || return 1
+  [ -n "$server_bin" ] || return 1
+  local actual
+  actual="$(ps -p "$candidate_pid" -o command= 2>/dev/null)" || return 1
+  [ "$actual" = "$server_bin ${server_args[*]}" ]
+}
 managed() {
   [ -f "$pid_file" ] || return 1
   server_pid="$(<"$pid_file")"
-  [[ "$server_pid" =~ ^[0-9]+$ ]] || return 1
-  [ -n "$server_bin" ] || return 1
-  local actual
-  actual="$(ps -p "$server_pid" -o command= 2>/dev/null)" || return 1
-  [ "$actual" = "$server_bin --bind 127.0.0.1 --node-ip 127.0.0.1 --rtc.enable_loopback_candidate" ]
+  managed_pid "$server_pid"
+}
+adopt_managed_listener() {
+  local listener_pid
+  listener_pid="$(lsof -nP -t -iTCP@127.0.0.1:7880 -sTCP:LISTEN 2>/dev/null | head -n 1)"
+  managed_pid "$listener_pid" || return 1
+  server_pid="$listener_pid"
+  mkdir -p "$project_root/work"
+  printf '%s\n' "$server_pid" > "$pid_file"
 }
 case "${1:-Status}" in
   Setup)
@@ -29,7 +42,7 @@ case "${1:-Status}" in
       exit 1
     fi
     if reachable; then
-      if managed; then
+      if managed || adopt_managed_listener; then
         echo "LiveKit läuft bereits auf ws://localhost:7880 (PID $server_pid)."
         exit 0
       fi
@@ -65,7 +78,7 @@ NODE
     exit 1
     ;;
   Status)
-    if managed && reachable; then
+    if reachable && { managed || adopt_managed_listener; }; then
       echo "LiveKit läuft auf ws://localhost:7880 (PID $server_pid)."
     elif reachable; then
       echo "Port 7880 ist erreichbar, gehört aber nicht zum verwalteten Server."
@@ -74,7 +87,7 @@ NODE
     fi
     ;;
   Stop)
-    if managed; then
+    if managed || { reachable && adopt_managed_listener; }; then
       kill "$server_pid"
       echo "LiveKit wird beendet (PID $server_pid)."
     elif reachable; then
