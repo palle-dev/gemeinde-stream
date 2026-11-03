@@ -52,6 +52,10 @@ Apple-Silicon-Mac und vor der öffentlichen Freigabe auch ein Intel-Mac benötig
 | Neuinstallation auf Windows | ☐ Bestanden ☐ Fehler | |
 | Neuinstallation auf macOS Intel ohne Gatekeeper-Warnung | ☐ Bestanden ☐ Fehler | |
 | Neuinstallation auf macOS Apple Silicon ohne Gatekeeper-Warnung | ☐ Bestanden ☐ Fehler | |
+| Gemeinde Meeting auf Windows installieren und starten | ☐ Bestanden ☐ Fehler | |
+| Gemeinde Meeting auf macOS Intel und Apple Silicon installieren und starten | ☐ Bestanden ☐ Fehler | |
+| Meeting-Client zeigt und öffnet keine Live-Produktionen | ☐ Bestanden ☐ Fehler | |
+| `gemeinde-meeting://` öffnet direkt das richtige Meeting | ☐ Bestanden ☐ Fehler | |
 | Update von der vorherigen veröffentlichten Version | ☐ Bestanden ☐ Fehler | |
 | Anmeldung, Abmeldung und erneute Anmeldung | ☐ Bestanden ☐ Fehler | |
 | Kamera-, Mikrofon- und Bildschirmfreigaben verständlich | ☐ Bestanden ☐ Fehler | |

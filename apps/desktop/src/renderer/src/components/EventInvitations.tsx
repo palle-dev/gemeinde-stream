@@ -5,6 +5,10 @@ import type { EventRecord, MembershipRecord } from "../domain";
 import { roleLabel, type ParticipantRole } from "./MeetingModeration";
 import type { AssignableRole } from "./RoomRoleManagement";
 import { useFeedback } from "./FeedbackProvider";
+import {
+  PRODUCT_PROTOCOL,
+  type ProductVariant,
+} from "../productVariant";
 
 type FunctionEnvelope<T> = T | { data: T };
 const roles: AssignableRole[] = [
@@ -27,7 +31,10 @@ function messageOf(error: unknown): string {
     : "Einladung konnte nicht verarbeitet werden.";
 }
 
-export function invitationText(event: EventRecord): string {
+export function invitationText(
+  event: EventRecord,
+  variant?: ProductVariant,
+): string {
   const start = event.starts_at
     ? new Date(event.starts_at).toLocaleString("de-DE", {
         dateStyle: "full",
@@ -39,14 +46,18 @@ export function invitationText(event: EventRecord): string {
     event.description || "",
     `Termin: ${start}`,
     `Raumcode: ${event.join_code}`,
-    `Direkt beitreten: ${invitationLink(event)}`,
+    `Direkt beitreten: ${invitationLink(event, variant)}`,
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-export function invitationLink(event: EventRecord): string {
-  return `gemeinde-stream://join/${encodeURIComponent(event.join_code)}`;
+export function invitationLink(
+  event: EventRecord,
+  variant?: ProductVariant,
+): string {
+  const protocol = variant === "meeting" ? "gemeinde-meeting" : PRODUCT_PROTOCOL;
+  return `${protocol}://join/${encodeURIComponent(event.join_code)}`;
 }
 
 export function EventInvitations({

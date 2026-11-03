@@ -40,6 +40,10 @@ input { border: 1px solid var(--line); background: #0b1016; color: white; border
 textarea { resize: vertical; border: 1px solid var(--line); background: #0b1016; color: white; border-radius: 10px; padding: 12px 14px; line-height: 1.45; }
 select { width: 100%; border: 1px solid var(--line); background: #0b1016; color: white; border-radius: 10px; padding: 12px 38px 12px 13px; }
 input::placeholder { color: #5e6977; }
+.unsupported-room { min-height: 100vh; display: grid; place-items: center; align-content: center; gap: 16px; padding: 32px; background: #080b10; color: white; text-align: center; }
+.unsupported-room > svg { width: 52px; height: 52px; color: var(--lime); }
+.unsupported-room h1, .unsupported-room p { margin: 0; }
+.unsupported-room p { max-width: 580px; color: var(--muted); line-height: 1.55; }
 .primary, .secondary, .ghost { border: 0; border-radius: 10px; cursor: pointer; font-weight: 700; padding: 13px 18px; }
 .primary { width: 100%; background: var(--lime); color: #0a0e09; }
 .primary:hover { background: #c6ff65; }

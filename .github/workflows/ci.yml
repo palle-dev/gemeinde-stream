@@ -61,26 +61,40 @@ jobs:
       - name: Native macOS-Pakete bauen
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm run dist:mac
+        run: |
+          npm run dist:mac
+          npm run dist:meeting:mac
       - name: macOS-Pakete und Bundle prüfen
         run: |
           app_bundle=$(find apps/desktop/release -name 'Gemeinde Stream.app' -type d | head -1)
+          meeting_bundle=$(find apps/desktop/release-meeting -name 'Gemeinde Meeting.app' -type d | head -1)
           app_binary=$(find apps/desktop/release -path '*/Gemeinde Stream.app/Contents/MacOS/Gemeinde Stream' -type f | head -1)
+          meeting_binary=$(find apps/desktop/release-meeting -path '*/Gemeinde Meeting.app/Contents/MacOS/Gemeinde Meeting' -type f | head -1)
           ffmpeg_binary=$(find apps/desktop/release -path '*/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg' -type f | head -1)
+          meeting_ffmpeg=$(find apps/desktop/release-meeting -path '*/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg' -type f | head -1)
           package_version=$(node -p "require('./apps/desktop/package.json').version")
           test -n "$app_bundle"
+          test -n "$meeting_bundle"
           test -n "$app_binary"
+          test -n "$meeting_binary"
           test -n "$ffmpeg_binary"
+          test -n "$meeting_ffmpeg"
           test -x "$app_binary"
+          test -x "$meeting_binary"
           test -x "$ffmpeg_binary"
+          test -x "$meeting_ffmpeg"
           file "$app_binary" | grep '${{ matrix.file_arch }}'
+          file "$meeting_binary" | grep '${{ matrix.file_arch }}'
           file "$ffmpeg_binary" | grep '${{ matrix.file_arch }}'
+          file "$meeting_ffmpeg" | grep '${{ matrix.file_arch }}'
           test "$(plutil -extract CFBundleIdentifier raw "$app_bundle/Contents/Info.plist")" = "de.gemeinde.stream"
+          test "$(plutil -extract CFBundleIdentifier raw "$meeting_bundle/Contents/Info.plist")" = "de.gemeinde.meeting"
           test "$(plutil -extract CFBundleShortVersionString raw "$app_bundle/Contents/Info.plist")" = "$package_version"
-          for package in apps/desktop/release/*.dmg; do
+          test "$(plutil -extract CFBundleShortVersionString raw "$meeting_bundle/Contents/Info.plist")" = "$package_version"
+          for package in apps/desktop/release/*.dmg apps/desktop/release-meeting/*.dmg; do
             hdiutil verify -quiet "$package"
           done
-          for package in apps/desktop/release/*.zip; do
+          for package in apps/desktop/release/*.zip apps/desktop/release-meeting/*.zip; do
             unzip -tqq "$package"
           done
       - uses: actions/upload-artifact@v7
@@ -89,6 +103,8 @@ jobs:
           path: |
             apps/desktop/release/*.dmg
             apps/desktop/release/*.zip
+            apps/desktop/release-meeting/*.dmg
+            apps/desktop/release-meeting/*.zip
           if-no-files-found: error
           retention-days: 14
 
@@ -122,14 +138,18 @@ jobs:
         run: npm run stream:smoke
 
       - name: Windows-Installer bauen
-        run: npm run dist:win
+        run: |
+          npm run dist:win
+          npm run dist:meeting:win
 
       - name: Installer als Build-Artefakt speichern
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
           name: gemeinde-stream-windows
-          path: apps/desktop/release/*.exe
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release-meeting/*.exe
           if-no-files-found: error
           retention-days: 14
 

@@ -8,9 +8,13 @@
   "scripts": {
     "electron:setup": "install-electron --no",
     "dev": "npm run electron:setup && electron-vite dev",
+    "dev:meeting": "npm run electron:setup && electron-vite dev --mode meeting",
     "build": "electron-vite build",
+    "build:meeting": "electron-vite build --mode meeting",
     "dist:win": "npm run build && electron-builder --win nsis",
     "dist:mac": "npm run build && electron-builder --mac dmg zip",
+    "dist:meeting:win": "npm run build:meeting && electron-builder --config electron-builder.meeting.yml --win nsis",
+    "dist:meeting:mac": "npm run build:meeting && electron-builder --config electron-builder.meeting.yml --mac dmg zip",
     "preview": "npm run electron:setup && electron-vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

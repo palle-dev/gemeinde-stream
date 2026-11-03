@@ -5,6 +5,15 @@ Professionelles macOS- und Windows-Studio mit Base44-Backend für zwei Betriebsa
 - **Meeting:** interaktive Räume mit Kamera, Mikrofon und Bildschirmfreigabe
 - **Broadcast:** rollenbasierte Master-Regie mit Vorschau, synchronisiertem Programmbild, Szenen und Remote-Quellen
 
+Aus derselben geprüften Codebasis entstehen zwei getrennte Desktop-Produkte:
+
+- **Gemeinde Stream:** vollständiges Studio mit Meetings und Live-Regie
+- **Gemeinde Meeting:** schlanker Meeting-Client ohne Studio- und Streamingoberfläche für Windows, macOS Intel und Apple Silicon
+
+Der Meeting-Client verwendet die eigene App-ID `de.gemeinde.meeting`, das
+Einladungsprotokoll `gemeinde-meeting://` und ein separates Anwendungsdatenverzeichnis.
+Broadcast-Räume werden weder angezeigt noch geöffnet.
+
 Hosts können Veranstaltungen mit Beschreibung, Startzeit, Teilnehmerlimit sowie Kamera- und Mikrofonvorgaben planen. Geplante und beendete Veranstaltungen lassen sich später bearbeiten oder vollständig löschen; das Backend bereinigt dabei zugehörige Mitgliedschaften und Szenen.
 
 Teilnehmer können vorab per E-Mail-Adresse als Co-Host, Operator, Sprecher, Teilnehmer oder Zuschauer eingeladen werden. Der Raum erscheint im Dashboard des eingeladenen Kontos, und die vorab vergebene Rolle bleibt beim Beitritt erhalten. Ein fertiger Einladungstext mit Termin und Raumcode lässt sich für E-Mail oder Messenger kopieren.
@@ -101,6 +110,17 @@ npm run livekit:status
 npm run livekit:smoke
 npm run livekit:stop
 ```
+
+Den separaten Meeting-Client starten und bauen:
+
+```powershell
+npm run dev:meeting:local
+npm run build:meeting
+npm run dist:meeting:win
+```
+
+Auf macOS wird das native Meeting-Paket mit `npm run dist:meeting:mac`
+erzeugt. Die Ausgabe liegt getrennt unter `apps/desktop/release-meeting`.
 
 Beim ersten Start wird die geprüfte Windows-Version von LiveKit bei Bedarf automatisch heruntergeladen; `livekit:setup` kann dafür auch ausdrücklich aufgerufen werden.
 

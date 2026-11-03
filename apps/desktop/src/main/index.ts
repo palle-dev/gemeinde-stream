@@ -51,6 +51,18 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+const meetingOnlyProduct = import.meta.env.MODE === "meeting";
+if (meetingOnlyProduct) app.setName("Gemeinde Meeting");
+const applicationName = meetingOnlyProduct
+  ? "Gemeinde Meeting"
+  : "Gemeinde Stream";
+const applicationProtocol = meetingOnlyProduct
+  ? "gemeinde-meeting"
+  : "gemeinde-stream";
+const applicationSlug = meetingOnlyProduct
+  ? "gemeinde-meeting"
+  : "gemeinde-stream";
+
 const recordingFiles = new RecordingStore();
 const recordingDialogs = new Set<number>();
 
@@ -89,7 +101,7 @@ let pendingJoinCode = joinCodeFromArguments(process.argv);
 let mediaAssets: StoredMediaAsset[] = [];
 
 function diagnosticLogPath(): string {
-  return join(app.getPath("logs"), "gemeinde-stream.log");
+  return join(app.getPath("logs"), `${applicationSlug}.log`);
 }
 
 async function logDiagnostic(
@@ -147,11 +159,11 @@ function deliverJoinCode(code: string | null): void {
 
 function registerProtocol(): void {
   if (process.defaultApp && process.argv[1]) {
-    app.setAsDefaultProtocolClient("gemeinde-stream", process.execPath, [
+    app.setAsDefaultProtocolClient(applicationProtocol, process.execPath, [
       process.argv[1],
     ]);
   } else {
-    app.setAsDefaultProtocolClient("gemeinde-stream");
+    app.setAsDefaultProtocolClient(applicationProtocol);
   }
 }
 
@@ -174,12 +186,12 @@ ipcMain.handle("diagnostics:export", async (event) => {
   const result = owner
     ? await dialog.showSaveDialog(owner, {
         title: "Supportbericht speichern",
-        defaultPath: `gemeinde-stream-support-${new Date().toISOString().slice(0, 10)}.json`,
+        defaultPath: `${applicationSlug}-support-${new Date().toISOString().slice(0, 10)}.json`,
         filters: [{ name: "JSON-Bericht", extensions: ["json"] }],
       })
     : await dialog.showSaveDialog({
         title: "Supportbericht speichern",
-        defaultPath: `gemeinde-stream-support-${new Date().toISOString().slice(0, 10)}.json`,
+        defaultPath: `${applicationSlug}-support-${new Date().toISOString().slice(0, 10)}.json`,
         filters: [{ name: "JSON-Bericht", extensions: ["json"] }],
       });
   if (result.canceled || !result.filePath) return false;
@@ -758,7 +770,7 @@ function createWindow(): void {
     minWidth: 800,
     minHeight: 500,
     backgroundColor: "#080b10",
-    title: "Gemeinde Stream",
+    title: applicationName,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -927,7 +939,7 @@ if (!hasSingleInstanceLock) {
       );
       await dialog.showMessageBox({
         type: "error",
-        title: "Gemeinde Stream konnte nicht gestartet werden",
+        title: `${applicationName} konnte nicht gestartet werden`,
         message: "Die Anwendung konnte nicht vollständig initialisiert werden.",
         detail: `${message}\n\nBitte starten Sie die Anwendung erneut. Falls der Fehler bleibt, wenden Sie sich an den Support.`,
       });

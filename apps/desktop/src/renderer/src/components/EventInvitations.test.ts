@@ -8,5 +8,6 @@ describe("event invitations", () => {
     expect(text).toContain("Raumcode: ABC23456");
     expect(text).toContain("gemeinde-stream://join/ABC23456");
     expect(invitationLink({ id: "1", title: "Gottesdienst", mode: "broadcast", status: "scheduled", host_email: "host@example.de", join_code: "ABC23456", livekit_room_name: "room" })).toBe("gemeinde-stream://join/ABC23456");
+    expect(invitationLink({ id: "2", title: "Besprechung", mode: "meeting", status: "scheduled", host_email: "host@example.de", join_code: "DEF34567", livekit_room_name: "meeting" }, "meeting")).toBe("gemeinde-meeting://join/DEF34567");
   });
 });

@@ -47,6 +47,8 @@ git push origin v0.3.0
 
 Der Workflow bricht sofort ab, wenn Tag und Paketversion nicht übereinstimmen.
 Er baut Windows sowie macOS für Intel und Apple Silicon nativ.
+Für jede Plattform entstehen sowohl das vollständige Produkt „Gemeinde Stream“
+als auch der getrennte Client „Gemeinde Meeting“.
 
 ## Automatische Freigabegates
 
@@ -62,6 +64,7 @@ sind:
 - validiertes Apple-Notarisierungs-Ticket für App und DMG
 - korrekte App-/FFmpeg-Architektur für Intel und Apple Silicon
 - SHA-256-Prüfsummen für alle veröffentlichten Dateien
+- getrennte App-IDs und Installer-Namen für Studio und Meeting-Client
 
 ## Nach dem Release
 

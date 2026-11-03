@@ -3,7 +3,10 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { FeedbackProvider } from "./components/FeedbackProvider";
+import { PRODUCT_NAME } from "./productVariant";
 import "./styles.css";
+
+document.title = PRODUCT_NAME;
 
 window.addEventListener("error", (event) => {
   void window.desktop?.reportDiagnostic?.(

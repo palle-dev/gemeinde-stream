@@ -5,6 +5,7 @@ describe("join deep links", () => {
   it("reads a valid room code from path and query links", () => {
     expect(joinCodeFromDeepLink("gemeinde-stream://join/ABC23456")).toBe("ABC23456");
     expect(joinCodeFromDeepLink("gemeinde-stream://join?code=DEF34567")).toBe("DEF34567");
+    expect(joinCodeFromDeepLink("gemeinde-meeting://join/GHJ45678")).toBe("GHJ45678");
   });
 
   it("rejects foreign schemes and ambiguous characters", () => {

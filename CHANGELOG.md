@@ -1,5 +1,14 @@
 # Änderungsprotokoll
 
+## Unveröffentlicht
+
+### Separater Meeting-Client
+
+- Eigenständiges Produkt „Gemeinde Meeting“ für Windows, macOS Intel und Apple Silicon
+- Eigene App-ID, eigenes Datenverzeichnis und Einladungsprotokoll `gemeinde-meeting://`
+- Ausschließlich Meetingräume; Live-Regie und Broadcast-Räume sind konsequent ausgeblendet und gesperrt
+- Getrennte Installer-Artefakte in CI und signierten GitHub-Releases
+
 ## 0.3.0 – Produktionsreife Live-Regie
 
 ### Live-Produktion

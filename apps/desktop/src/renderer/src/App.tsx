@@ -130,6 +130,13 @@ import {
   type RoomMode,
   type UserInfo,
 } from "./domain";
+import {
+  PRODUCT_NAME,
+  PRODUCT_SUBTITLE,
+  PRODUCT_VARIANT,
+  productAllowsRoom,
+  productRoomError,
+} from "./productVariant";
 
 type FunctionEnvelope<T> = T | { data: T };
 
@@ -194,7 +201,7 @@ export default function App() {
         <div className="brand-mark">
           <Radio />
         </div>
-        <span>Gemeinde Stream wird vorbereitet …</span>
+        <span>{PRODUCT_NAME} wird vorbereitet …</span>
         <small>Anmeldung und Dienste werden geprüft</small>
       </div>
     );
@@ -217,6 +224,17 @@ export default function App() {
     );
 
   if (!user) return <Login onAuthenticated={(nextUser) => setUser(nextUser)} />;
+  if (activeEvent && !productAllowsRoom(PRODUCT_VARIANT, activeEvent.mode))
+    return (
+      <main className="unsupported-room" role="alert">
+        <Radio />
+        <h1>Live-Produktion nicht verfügbar</h1>
+        <p>{productRoomError(PRODUCT_VARIANT, activeEvent.mode)}</p>
+        <button className="primary compact" onClick={() => setActiveEvent(null)}>
+          Zurück zu den Meetings
+        </button>
+      </main>
+    );
   if (activeEvent)
     return (
       <Studio
@@ -312,15 +330,17 @@ function Login({
           <em>Überall.</em>
         </h1>
         <p>
-          Meetings, Gottesdienste und hybride Veranstaltungen in einer
-          gemeinsamen Produktionsumgebung.
+          {PRODUCT_VARIANT === "meeting"
+            ? "Videomeetings, Gespräche und Zusammenarbeit in einer geschützten Umgebung."
+            : "Meetings, Gottesdienste und hybride Veranstaltungen in einer gemeinsamen Produktionsumgebung."}
         </p>
         <div className="feature-row">
           <span>
             <Video size={18} /> Adaptive HD-Videoqualität
           </span>
           <span>
-            <Users size={18} /> Meeting & Regie
+            <Users size={18} />
+            {PRODUCT_VARIANT === "meeting" ? "Meeting & Zusammenarbeit" : "Meeting & Regie"}
           </span>
           <span>
             <ShieldCheck size={18} /> Geschützte Räume
@@ -333,8 +353,8 @@ function Login({
             <Radio />
           </div>
           <div>
-            <b>Gemeinde Stream</b>
-            <small>Studio für Meetings und Live-Produktionen</small>
+            <b>{PRODUCT_NAME}</b>
+            <small>{PRODUCT_SUBTITLE}</small>
           </div>
         </div>
         <form onSubmit={submit}>
@@ -595,11 +615,15 @@ function Dashboard({
   }
 
   const visibleOwned =
-    view === "studio"
+    PRODUCT_VARIANT === "meeting"
+      ? owned.filter((event) => event.mode === "meeting")
+      : view === "studio"
       ? owned.filter((event) => event.mode === "broadcast")
       : owned;
   const visibleMemberships =
-    view === "studio"
+    PRODUCT_VARIANT === "meeting"
+      ? memberships.filter((member) => member.event_mode === "meeting")
+      : view === "studio"
       ? memberships.filter((member) => member.event_mode === "broadcast")
       : memberships;
 
@@ -611,8 +635,8 @@ function Dashboard({
             <Radio />
           </div>
           <div>
-            <b>Gemeinde Stream</b>
-            <small>Studio</small>
+            <b>{PRODUCT_NAME}</b>
+            <small>{PRODUCT_VARIANT === "meeting" ? "Meeting" : "Studio"}</small>
           </div>
         </div>
         <nav>
@@ -620,14 +644,16 @@ function Dashboard({
             className={view === "events" ? "nav-active" : ""}
             onClick={() => setView("events")}
           >
-            <CalendarDays /> Veranstaltungen
+            <CalendarDays /> {PRODUCT_VARIANT === "meeting" ? "Meetings" : "Veranstaltungen"}
           </button>
-          <button
-            className={view === "studio" ? "nav-active" : ""}
-            onClick={() => setView("studio")}
-          >
-            <Video /> Studio
-          </button>
+          {PRODUCT_VARIANT === "studio" && (
+            <button
+              className={view === "studio" ? "nav-active" : ""}
+              onClick={() => setView("studio")}
+            >
+              <Video /> Studio
+            </button>
+          )}
           <button
             className={view === "team" ? "nav-active" : ""}
             onClick={() => setView("team")}
@@ -669,19 +695,23 @@ function Dashboard({
                 <h1>
                   {view === "studio"
                     ? "Ihre Produktionen"
-                    : "Ihre Veranstaltungen"}
+                    : PRODUCT_VARIANT === "meeting"
+                      ? "Ihre Meetings"
+                      : "Ihre Veranstaltungen"}
                 </h1>
                 <p>
                   {view === "studio"
                     ? "Geplante und laufende Gottesdienst-Produktionen öffnen."
-                    : "Meetings durchführen oder eine komplette Live-Produktion steuern."}
+                    : PRODUCT_VARIANT === "meeting"
+                      ? "Meetings planen, beitreten und gemeinsam arbeiten."
+                      : "Meetings durchführen oder eine komplette Live-Produktion steuern."}
                 </p>
               </div>
               <button
                 className="primary compact"
                 onClick={() => setShowCreate(true)}
               >
-                <Plus /> Neue Veranstaltung
+                <Plus /> {PRODUCT_VARIANT === "meeting" ? "Neues Meeting" : "Neue Veranstaltung"}
               </button>
             </header>
             {notice && <div className="error-banner">{notice}</div>}
@@ -692,7 +722,11 @@ function Dashboard({
                 </div>
                 <div>
                   <b>Einem Raum beitreten</b>
-                  <span>Meeting- oder Produktionscode eingeben</span>
+                  <span>
+                    {PRODUCT_VARIANT === "meeting"
+                      ? "Meetingcode eingeben"
+                      : "Meeting- oder Produktionscode eingeben"}
+                  </span>
                 </div>
                 <input
                   aria-label="Raumcode"
@@ -745,9 +779,15 @@ function Dashboard({
                     <h3>
                       {view === "studio"
                         ? "Noch keine Produktion"
-                        : "Noch keine Veranstaltung"}
+                        : PRODUCT_VARIANT === "meeting"
+                          ? "Noch kein Meeting"
+                          : "Noch keine Veranstaltung"}
                     </h3>
-                    <p>Erstellen Sie ein Meeting oder eine Live-Produktion.</p>
+                    <p>
+                      {PRODUCT_VARIANT === "meeting"
+                        ? "Planen Sie Ihr erstes Meeting oder treten Sie mit einem Raumcode bei."
+                        : "Erstellen Sie ein Meeting oder eine Live-Produktion."}
+                    </p>
                     <button
                       className="secondary"
                       onClick={() => setShowCreate(true)}
@@ -877,7 +917,13 @@ function RoomCard({
       </div>
       <div className="room-card-actions">
         <button className="secondary full" onClick={onOpen} disabled={ended}>
-          {ended ? "Veranstaltung beendet" : "Studio öffnen"}
+          {ended
+            ? event.mode === "meeting"
+              ? "Meeting beendet"
+              : "Veranstaltung beendet"
+            : event.mode === "meeting"
+              ? "Meeting öffnen"
+              : "Studio öffnen"}
         </button>
         {onInvite && (
           <button
@@ -1151,9 +1197,13 @@ function CreateRoom({
         aria-modal="true"
         aria-labelledby="create-event-title"
       >
-        <span className="eyebrow">NEUE VERANSTALTUNG</span>
-        <h2 id="create-event-title">Was möchten Sie planen?</h2>
-        <div className="mode-picker">
+        <span className="eyebrow">
+          {PRODUCT_VARIANT === "meeting" ? "NEUES MEETING" : "NEUE VERANSTALTUNG"}
+        </span>
+        <h2 id="create-event-title">
+          {PRODUCT_VARIANT === "meeting" ? "Meeting planen" : "Was möchten Sie planen?"}
+        </h2>
+        {PRODUCT_VARIANT === "studio" && <div className="mode-picker">
           <button
             type="button"
             className={mode === "meeting" ? "selected" : ""}
@@ -1172,7 +1222,7 @@ function CreateRoom({
             <b>Live-Produktion</b>
             <span>Master-Regie, Quellen und Programmausgabe</span>
           </button>
-        </div>
+        </div>}
         <EventDetailsFields
           title={title}
           setTitle={setTitle}
@@ -1201,7 +1251,11 @@ function CreateRoom({
             Abbrechen
           </button>
           <button className="primary" disabled={busy}>
-            {busy ? "Wird erstellt …" : "Veranstaltung planen"}
+            {busy
+              ? "Wird erstellt …"
+              : PRODUCT_VARIANT === "meeting"
+                ? "Meeting planen"
+                : "Veranstaltung planen"}
           </button>
         </div>
       </form>
