@@ -17,6 +17,16 @@
         }
       }
     },
+    "overlay_title": { "type": "string", "maxLength": 80, "default": "" },
+    "overlay_subtitle": { "type": "string", "maxLength": 120, "default": "" },
+    "audio_mix": {
+      "type": "object",
+      "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 },
+      "default": {}
+    },
+    "media_cue_seconds": { "type": "number", "minimum": 0, "maximum": 86400, "default": 0 },
+    "media_autoplay": { "type": "boolean", "default": true },
+    "sort_order": { "type": "integer", "minimum": 0, "default": 0 },
     "is_program": { "type": "boolean", "default": false }
   },
   "required": ["event_id", "owner_email", "name", "layout"],

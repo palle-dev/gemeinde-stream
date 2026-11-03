@@ -62,6 +62,7 @@ Apple-Silicon-Mac und vor der öffentlichen Freigabe auch ein Intel-Mac benötig
 | Private Meeting-Datei hochladen, auf zweitem Client öffnen und berechtigt entfernen | ☐ Bestanden ☐ Fehler | |
 | Umfrage starten, einmal abstimmen, Ergebnis verbergen/freigeben und CSV exportieren | ☐ Bestanden ☐ Fehler | |
 | Live-Untertitel starten, auf zweitem Client empfangen und lokales Protokoll exportieren | ☐ Bestanden ☐ Fehler | |
+| Spotlight setzen/lösen, spät beitreten und persönliche Fixierung unabhängig verwenden | ☐ Bestanden ☐ Fehler | |
 | Update von der vorherigen veröffentlichten Version | ☐ Bestanden ☐ Fehler | |
 | Anmeldung, Abmeldung und erneute Anmeldung | ☐ Bestanden ☐ Fehler | |
 | Kamera-, Mikrofon- und Bildschirmfreigaben verständlich | ☐ Bestanden ☐ Fehler | |

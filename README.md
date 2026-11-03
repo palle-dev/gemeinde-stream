@@ -38,6 +38,8 @@ Host, Co-Host und Operator können Live-Umfragen mit zwei bis sechs Antworten st
 
 Teilnehmer können – sofern die Chromium-System-Spracherkennung auf dem Rechner verfügbar ist – eigene deutsche Live-Untertitel starten. Nur die fertigen Textzeilen werden über den LiveKit-Datenkanal verteilt; Audio wird dafür nicht durch die Anwendung hochgeladen. Das Untertitelprotokoll bleibt lokal und kann als Textdatei exportiert oder bewusst gelöscht werden.
 
+Host, Co-Host und Operator können eine Kamera oder Bildschirmfreigabe als Spotlight für alle hervorheben. Der Zustand wird serverseitig autorisiert und nach Neuverbindungen wiederhergestellt. Unabhängig davon kann jeder Teilnehmer eine Quelle ausschließlich für die eigene Ansicht anheften.
+
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.

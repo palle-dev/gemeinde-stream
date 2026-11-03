@@ -8,7 +8,10 @@
     "kind": { "type": "string", "enum": ["welcome", "music", "speech", "prayer", "media", "announcement", "other"], "default": "other" },
     "position": { "type": "integer", "minimum": 0 },
     "duration_seconds": { "type": "integer", "minimum": 0, "maximum": 14400, "default": 300 },
-    "status": { "type": "string", "enum": ["pending", "live", "done"], "default": "pending" }
+    "status": { "type": "string", "enum": ["pending", "live", "done"], "default": "pending" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "scene_id": { "type": "string", "default": "" }
   },
   "required": ["event_id", "title", "kind", "position", "duration_seconds", "status"],
   "rls": {

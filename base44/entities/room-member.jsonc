@@ -9,12 +9,20 @@
     "display_name": { "type": "string" },
     "participant_identity": { "type": "string", "description": "LiveKit identity of the connected user" },
     "role": { "type": "string", "enum": ["host", "cohost", "operator", "speaker", "participant", "viewer"], "default": "participant" },
+    "access_source": { "type": "string", "enum": ["team", "invitation", "self", "guest"], "default": "self" },
     "status": { "type": "string", "enum": ["invited", "waiting", "joined", "left", "blocked"], "default": "joined" },
     "can_publish_audio": { "type": "boolean", "default": true },
     "can_publish_video": { "type": "boolean", "default": true },
     "can_share_screen": { "type": "boolean", "default": true },
     "can_control_program": { "type": "boolean", "default": false },
-    "last_seen_at": { "type": "string", "format": "date-time" }
+    "invitation_sent_at": { "type": "string", "format": "date-time" },
+    "invitation_delivery": { "type": "string", "enum": ["sent", "failed"] },
+    "schedule_notice_sent_at": { "type": "string", "format": "date-time" },
+    "schedule_notice_delivery": { "type": "string", "enum": ["sent", "failed"] },
+    "schedule_notice_for_start": { "type": "string", "format": "date-time" },
+    "last_seen_at": { "type": "string", "format": "date-time" },
+    "reminder_24h_for_start": { "type": "string", "format": "date-time" },
+    "reminder_1h_for_start": { "type": "string", "format": "date-time" }
   },
   "required": ["event_id", "event_title", "event_mode", "user_email", "display_name", "role"],
   "rls": {

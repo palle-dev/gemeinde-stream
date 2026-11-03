@@ -15,4 +15,14 @@ describe("meeting stage selection", () => {
   it("keeps the current stage while nobody is speaking", () => {
     expect(selectMeetingStage([tile("first"), tile("current")], "current")?.key).toBe("current");
   });
+
+  it("gives a moderator spotlight priority over screen shares and speakers", () => {
+    expect(selectMeetingStage([tile("spotlight"), tile("screen", { isScreenShare: true }), tile("speaker", { isSpeaking: true })], undefined, "spotlight")?.key).toBe("spotlight");
+  });
+
+  it("keeps a personal pin above automatic selection but below moderator spotlight", () => {
+    const tiles = [tile("spotlight"), tile("pinned"), tile("screen", { isScreenShare: true }), tile("speaker", { isSpeaking: true })];
+    expect(selectMeetingStage(tiles, undefined, null, "pinned")?.key).toBe("pinned");
+    expect(selectMeetingStage(tiles, undefined, "spotlight", "pinned")?.key).toBe("spotlight");
+  });
 });

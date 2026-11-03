@@ -6,7 +6,9 @@
     "email": { "type": "string", "format": "email" },
     "display_name": { "type": "string", "maxLength": 120 },
     "role": { "type": "string", "enum": ["admin", "producer", "operator", "member"], "default": "member" },
-    "status": { "type": "string", "enum": ["invited", "active", "disabled"], "default": "invited" }
+    "status": { "type": "string", "enum": ["invited", "active", "disabled"], "default": "invited" },
+    "invitation_delivery": { "type": "string", "enum": ["pending", "sent", "failed"], "default": "pending" },
+    "invitation_sent_at": { "type": "string", "format": "date-time" }
   },
   "required": ["organization_id", "email", "display_name", "role", "status"],
   "rls": {

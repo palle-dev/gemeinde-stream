@@ -17,11 +17,15 @@ import {
   LockOpen,
   LogOut,
   MailCheck,
+  Maximize2,
   MessageSquare,
   Mic,
   MicOff,
   MonitorUp,
+  Minimize2,
   Pencil,
+  Pin,
+  PinOff,
   Plus,
   Radio,
   Settings,
@@ -72,6 +76,7 @@ import {
   type MeetingCaption,
 } from "./components/MeetingCaptions";
 import { MeetingTranscript } from "./components/MeetingTranscript";
+import { useMeetingSpotlight } from "./components/MeetingSpotlight";
 import {
   MEETING_REACTIONS,
   useMeetingReactions,
@@ -1914,6 +1919,13 @@ function MeetingCanvas({
     closePoll,
     clearPoll,
   } = useMeetingPoll(room, connected, eventId, undefined, canManageMeeting);
+  const spotlight = useMeetingSpotlight(
+    room,
+    connected,
+    eventId,
+    undefined,
+    canManageMeeting,
+  );
   const { reactions, sendReaction } = useMeetingReactions(room, connected);
   const {
     captions,
@@ -2063,6 +2075,9 @@ function MeetingCanvas({
         onViewChange={setView}
         reactions={latestReactions}
         captions={captions}
+        spotlightKey={spotlight.state.key}
+        canManageSpotlight={canManageMeeting}
+        onSpotlight={spotlight.setSpotlight}
       />
       <aside className="meeting-side">
         <WaitingRoomControls
@@ -2335,13 +2350,15 @@ function MeetingCanvas({
           chatError ||
           pollError ||
           attendanceError ||
-          captionsError) && (
+          captionsError ||
+          spotlight.error) && (
           <div className="inline-error">
             {collaborationError ||
               chatError ||
               pollError ||
               attendanceError ||
-              captionsError}
+              captionsError ||
+              spotlight.error}
           </div>
         )}
         <MeetingRecorder
@@ -2365,6 +2382,69 @@ interface MeetingVideoTile {
   isSpeaking: boolean;
 }
 
+function MeetingTileWithSpotlight({
+  tile,
+  reaction,
+  primary = false,
+  canManage,
+  spotlighted,
+  locallyPinned,
+  onSpotlight,
+  onLocalPin,
+}: {
+  tile: MeetingVideoTile;
+  reaction?: MeetingReaction;
+  primary?: boolean;
+  canManage: boolean;
+  spotlighted: boolean;
+  locallyPinned: boolean;
+  onSpotlight: (key: string | null) => Promise<void>;
+  onLocalPin: (key: string | null) => void;
+}) {
+  return (
+    <div
+      className={`meeting-tile-shell ${spotlighted ? "spotlighted" : ""} ${locallyPinned ? "locally-pinned" : ""}`}
+    >
+      <ParticipantTile
+        name={tile.name}
+        participant={tile.participant}
+        track={tile.track}
+        reaction={tile.isScreenShare ? undefined : reaction}
+        primary={primary}
+      />
+      {spotlighted && (
+        <span className="spotlight-badge">
+          <Pin /> Für alle hervorgehoben
+        </span>
+      )}
+      <button
+        className={`local-pin-button ${locallyPinned ? "active" : ""}`}
+        title={
+          locallyPinned
+            ? "Persönliche Fixierung lösen"
+            : "Nur für mich anheften"
+        }
+        onClick={() => onLocalPin(locallyPinned ? null : tile.key)}
+      >
+        {locallyPinned ? <Minimize2 /> : <Maximize2 />}
+      </button>
+      {canManage && (
+        <button
+          className={`spotlight-button ${spotlighted ? "active" : ""}`}
+          title={
+            spotlighted
+              ? "Spotlight für alle beenden"
+              : "Für alle hervorheben"
+          }
+          onClick={() => void onSpotlight(spotlighted ? null : tile.key)}
+        >
+          {spotlighted ? <PinOff /> : <Pin />}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function MeetingVideoArea({
   tiles,
   connected,
@@ -2373,6 +2453,9 @@ function MeetingVideoArea({
   onViewChange,
   reactions,
   captions,
+  spotlightKey,
+  canManageSpotlight,
+  onSpotlight,
 }: {
   tiles: MeetingVideoTile[];
   connected: boolean;
@@ -2381,14 +2464,28 @@ function MeetingVideoArea({
   onViewChange: (view: MeetingRecordingLayout) => void;
   reactions: Map<string, MeetingReaction>;
   captions: MeetingCaption[];
+  spotlightKey: string | null;
+  canManageSpotlight: boolean;
+  onSpotlight: (key: string | null) => Promise<void>;
 }) {
   const [stageKey, setStageKey] = useState<string>();
-  const stage = selectMeetingStage(tiles, stageKey);
+  const [pinnedKey, setPinnedKey] = useState<string | null>(null);
+  const stage = selectMeetingStage(tiles, stageKey, spotlightKey, pinnedKey);
   const filmstrip = tiles.filter((tile) => tile.key !== stage?.key);
 
   useEffect(() => {
     if (stage?.key !== stageKey) setStageKey(stage?.key);
   }, [stage?.key, stageKey]);
+
+  useEffect(() => {
+    if (pinnedKey && !tiles.some((tile) => tile.key === pinnedKey))
+      setPinnedKey(null);
+  }, [pinnedKey, tiles]);
+
+  function pinLocally(key: string | null) {
+    setPinnedKey(key);
+    if (key) onViewChange("speaker");
+  }
 
   return (
     <section className={`meeting-video-area ${view}`}>
@@ -2406,6 +2503,7 @@ function MeetingVideoArea({
         <button
           className={view === "gallery" ? "active" : ""}
           onClick={() => onViewChange("gallery")}
+          disabled={Boolean(spotlightKey)}
         >
           <Users /> Galerie
         </button>
@@ -2415,22 +2513,26 @@ function MeetingVideoArea({
         >
           <MonitorUp /> Sprecher
         </button>
+        {spotlightKey && (
+          <span>
+            <Pin /> Spotlight aktiv
+          </span>
+        )}
       </div>
       {view === "gallery" ? (
         <div className="meeting-grid">
           {tiles.length > 0 ? (
             tiles.map((tile, index) => (
-              <ParticipantTile
+              <MeetingTileWithSpotlight
                 key={tile.key}
-                name={tile.name}
-                participant={tile.participant}
-                track={tile.track}
-                reaction={
-                  tile.isScreenShare
-                    ? undefined
-                    : reactions.get(tile.participant.identity)
-                }
+                tile={tile}
+                reaction={reactions.get(tile.participant.identity)}
                 primary={index === 0}
+                canManage={canManageSpotlight}
+                spotlighted={tile.key === spotlightKey}
+                locallyPinned={tile.key === pinnedKey}
+                onSpotlight={onSpotlight}
+                onLocalPin={pinLocally}
               />
             ))
           ) : (
@@ -2452,16 +2554,15 @@ function MeetingVideoArea({
         <div className="speaker-view">
           <div className="speaker-stage">
             {stage ? (
-              <ParticipantTile
-                name={stage.name}
-                participant={stage.participant}
-                track={stage.track}
-                reaction={
-                  stage.isScreenShare
-                    ? undefined
-                    : reactions.get(stage.participant.identity)
-                }
+              <MeetingTileWithSpotlight
+                tile={stage}
+                reaction={reactions.get(stage.participant.identity)}
                 primary
+                canManage={canManageSpotlight}
+                spotlighted={stage.key === spotlightKey}
+                locallyPinned={stage.key === pinnedKey}
+                onSpotlight={onSpotlight}
+                onLocalPin={pinLocally}
               />
             ) : (
               <ParticipantTile name={fallbackName} primary />
@@ -2470,16 +2571,15 @@ function MeetingVideoArea({
           <div className="meeting-filmstrip">
             {filmstrip.length > 0 ? (
               filmstrip.map((tile) => (
-                <ParticipantTile
+                <MeetingTileWithSpotlight
                   key={tile.key}
-                  name={tile.name}
-                  participant={tile.participant}
-                  track={tile.track}
-                  reaction={
-                    tile.isScreenShare
-                      ? undefined
-                      : reactions.get(tile.participant.identity)
-                  }
+                  tile={tile}
+                  reaction={reactions.get(tile.participant.identity)}
+                  canManage={canManageSpotlight}
+                  spotlighted={tile.key === spotlightKey}
+                  locallyPinned={tile.key === pinnedKey}
+                  onSpotlight={onSpotlight}
+                  onLocalPin={pinLocally}
                 />
               ))
             ) : (

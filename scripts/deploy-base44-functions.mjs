@@ -16,6 +16,7 @@ const functions = [
   "meeting-notes",
   "meeting-files",
   "meeting-poll",
+  "meeting-spotlight",
 ];
 
 console.log(

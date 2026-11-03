@@ -272,11 +272,29 @@ input::placeholder { color: #5e6977; }
 .meeting-view-switch button { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 700; }
 .meeting-view-switch button svg { width: 14px; }
 .meeting-view-switch button.active { background: #26313c; color: var(--lime); }
+.meeting-view-switch button:disabled { opacity: .45; }
+.meeting-view-switch > span { display: flex; align-items: center; gap: 5px; padding: 0 7px; color: var(--lime); font-size: 9px; font-weight: 800; }
+.meeting-view-switch > span svg { width: 12px; }
 .speaker-view { height: 100%; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) 150px; gap: 12px; padding: 58px 18px 18px; }
 .speaker-stage { min-width: 0; min-height: 0; }
 .speaker-stage .participant-tile { border-color: #33404d; }
+.meeting-tile-shell { position: relative; min-width: 0; min-height: 0; height: 100%; }
+.meeting-tile-shell .participant-tile { height: 100%; }
+.meeting-tile-shell.spotlighted .participant-tile { border-color: #b8ff3d88; box-shadow: 0 0 0 1px #b8ff3d55; }
 .meeting-filmstrip { min-width: 0; min-height: 0; display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; }
 .meeting-filmstrip .participant-tile { flex: 0 0 230px; }
+.meeting-filmstrip .meeting-tile-shell { flex: 0 0 230px; }
+.spotlight-button { position: absolute; z-index: 5; top: 8px; right: 8px; width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 1px solid #ffffff30; border-radius: 8px; background: #080c11cc; color: #d4dbe2; opacity: 0; transition: opacity .15s, color .15s, border-color .15s; }
+.meeting-tile-shell:hover .spotlight-button, .spotlight-button.active { opacity: 1; }
+.spotlight-button.active { color: var(--lime); border-color: #b8ff3d88; }
+.spotlight-button svg { width: 15px; }
+.local-pin-button { position: absolute; z-index: 5; top: 8px; left: 8px; width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 1px solid #ffffff30; border-radius: 8px; background: #080c11cc; color: #d4dbe2; opacity: 0; transition: opacity .15s, color .15s, border-color .15s; }
+.meeting-tile-shell:hover .local-pin-button, .local-pin-button.active { opacity: 1; }
+.local-pin-button.active { color: var(--cyan); border-color: #35d5cc88; }
+.local-pin-button svg { width: 15px; }
+.meeting-tile-shell.locally-pinned:not(.spotlighted) { border-radius: 13px; box-shadow: 0 0 0 2px #35d5cc77; }
+.spotlight-badge { position: absolute; z-index: 4; top: 9px; left: 44px; display: flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid #b8ff3d66; border-radius: 7px; background: #142011e8; color: var(--lime); font-size: 9px; font-weight: 800; }
+.spotlight-badge svg { width: 12px; }
 .meeting-filmstrip .tile-label { left: 7px; right: 7px; bottom: 7px; padding: 5px 7px; font-size: 10px; }
 .filmstrip-empty { flex: 1; display: grid; place-items: center; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 11px; }
 .participant-tile { min-width: 0; min-height: 0; position: relative; height: 100%; overflow: hidden; border-radius: 12px; border: 1px solid #242c36; background: #111720; }
