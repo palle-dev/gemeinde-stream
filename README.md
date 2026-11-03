@@ -36,6 +36,8 @@ Angemeldete Teilnehmer können PDF-, Office-, Text- und Bilddateien bis 25 MB pr
 
 Host, Co-Host und Operator können Live-Umfragen mit zwei bis sechs Antworten starten. Jeder Teilnehmer stimmt genau einmal ab; Zwischenstände können bis zum Ende verborgen bleiben. Abgeschlossene Ergebnisse bleiben in der Historie erhalten und lassen sich als CSV exportieren.
 
+Teilnehmer können – sofern die Chromium-System-Spracherkennung auf dem Rechner verfügbar ist – eigene deutsche Live-Untertitel starten. Nur die fertigen Textzeilen werden über den LiveKit-Datenkanal verteilt; Audio wird dafür nicht durch die Anwendung hochgeladen. Das Untertitelprotokoll bleibt lokal und kann als Textdatei exportiert oder bewusst gelöscht werden.
+
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.

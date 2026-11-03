@@ -27,6 +27,7 @@ import {
   Settings,
   ShieldCheck,
   FileText,
+  Subtitles,
   Trash2,
   Users,
   UserPlus,
@@ -66,6 +67,11 @@ import {
   MeetingPollPanel,
   useMeetingPoll,
 } from "./components/MeetingPolls";
+import {
+  useMeetingCaptions,
+  type MeetingCaption,
+} from "./components/MeetingCaptions";
+import { MeetingTranscript } from "./components/MeetingTranscript";
 import {
   MEETING_REACTIONS,
   useMeetingReactions,
@@ -1909,6 +1915,15 @@ function MeetingCanvas({
     clearPoll,
   } = useMeetingPoll(room, connected, eventId, undefined, canManageMeeting);
   const { reactions, sendReaction } = useMeetingReactions(room, connected);
+  const {
+    captions,
+    transcript,
+    listening: captionsListening,
+    supported: captionsSupported,
+    error: captionsError,
+    toggle: toggleCaptions,
+    clearTranscript,
+  } = useMeetingCaptions(room, connected);
   const participants = mediaParticipants.map((participant) => ({
     ...participant,
     handRaised: raisedIdentities.has(participant.identity),
@@ -1921,7 +1936,7 @@ function MeetingCanvas({
     onModerationRemove,
   );
   const [sideTab, setSideTab] = useState<
-    "participants" | "chat" | "poll" | "files" | "notes"
+    "participants" | "chat" | "poll" | "files" | "transcript" | "notes"
   >("participants");
   const [view, setView] = useState<MeetingRecordingLayout>("gallery");
   const [chatText, setChatText] = useState("");
@@ -2047,6 +2062,7 @@ function MeetingCanvas({
         view={view}
         onViewChange={setView}
         reactions={latestReactions}
+        captions={captions}
       />
       <aside className="meeting-side">
         <WaitingRoomControls
@@ -2085,6 +2101,12 @@ function MeetingCanvas({
             onClick={() => setSideTab("notes")}
           >
             <FileText size={15} /> Notizen
+          </button>
+          <button
+            className={sideTab === "transcript" ? "active" : ""}
+            onClick={() => setSideTab("transcript")}
+          >
+            <Subtitles size={15} /> Protokoll
           </button>
         </div>
         {sideTab === "participants" ? (
@@ -2206,6 +2228,24 @@ function MeetingCanvas({
                 </button>
               ))}
             </div>
+            <button
+              className={`caption-toggle ${captionsListening ? "active" : ""}`}
+              disabled={!connected || !captionsSupported}
+              title={
+                captionsSupported
+                  ? "Gesprochene Sätze als Untertitel an das Meeting senden"
+                  : "Spracherkennung ist auf diesem System nicht verfügbar"
+              }
+              onClick={toggleCaptions}
+            >
+              <Subtitles />
+              {captionsListening
+                ? "Untertitel stoppen"
+                : "Eigene Untertitel starten"}
+            </button>
+            {captionsError && (
+              <small className="caption-error">{captionsError}</small>
+            )}
           </div>
         ) : sideTab === "chat" ? (
           <div className="chat-panel">
@@ -2277,6 +2317,12 @@ function MeetingCanvas({
             connected={connected}
             room={room}
           />
+        ) : sideTab === "transcript" ? (
+          <MeetingTranscript
+            title={title}
+            entries={transcript}
+            onClear={clearTranscript}
+          />
         ) : (
           <MeetingNotes
             eventId={eventId}
@@ -2285,9 +2331,17 @@ function MeetingCanvas({
             room={room}
           />
         )}
-        {(collaborationError || chatError || pollError || attendanceError) && (
+        {(collaborationError ||
+          chatError ||
+          pollError ||
+          attendanceError ||
+          captionsError) && (
           <div className="inline-error">
-            {collaborationError || chatError || pollError || attendanceError}
+            {collaborationError ||
+              chatError ||
+              pollError ||
+              attendanceError ||
+              captionsError}
           </div>
         )}
         <MeetingRecorder
@@ -2318,6 +2372,7 @@ function MeetingVideoArea({
   view,
   onViewChange,
   reactions,
+  captions,
 }: {
   tiles: MeetingVideoTile[];
   connected: boolean;
@@ -2325,6 +2380,7 @@ function MeetingVideoArea({
   view: MeetingRecordingLayout;
   onViewChange: (view: MeetingRecordingLayout) => void;
   reactions: Map<string, MeetingReaction>;
+  captions: MeetingCaption[];
 }) {
   const [stageKey, setStageKey] = useState<string>();
   const stage = selectMeetingStage(tiles, stageKey);
@@ -2336,6 +2392,16 @@ function MeetingVideoArea({
 
   return (
     <section className={`meeting-video-area ${view}`}>
+      {captions.length > 0 && (
+        <div className="caption-overlay" aria-live="polite">
+          {captions.map((caption) => (
+            <div key={`${caption.senderIdentity}:${caption.id}`}>
+              <b>{caption.senderName}</b>
+              <span>{caption.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="meeting-view-switch">
         <button
           className={view === "gallery" ? "active" : ""}

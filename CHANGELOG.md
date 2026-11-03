@@ -16,6 +16,7 @@
 - Gemeinsame Meeting-Notizen mit automatischer Speicherung, Konfliktschutz, Versionshistorie und Markdown-Export
 - Private Dateifreigabe bis 25 MB mit kurzlebigen Downloadlinks, geprüften Dateitypen und serverseitig autorisiertem Upload
 - Persistente Live-Umfragen mit verdeckten Zwischenständen, einmaliger Stimmabgabe, Ergebnisexport und Umfragehistorie
+- Optionale deutsche Live-Untertitel über die lokale System-Spracherkennung mit lokalem, exportierbarem Besprechungsprotokoll
 - Gehärteter Dateiexport über den Electron-Hauptprozess mit Größen-, Dateinamen- und Erweiterungsprüfung
 
 ## 0.3.0 – Produktionsreife Live-Regie
