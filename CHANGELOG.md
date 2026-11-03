@@ -9,6 +9,12 @@
 - Ausschließlich Meetingräume; Live-Regie und Broadcast-Räume sind konsequent ausgeblendet und gesperrt
 - Getrennte Installer-Artefakte in CI und signierten GitHub-Releases
 
+### Meeting-Zusammenarbeit
+
+- Persistenter, serverseitig autorisierter Meeting-Chat mit Wiederherstellung nach Verbindungsabbrüchen und Löschfunktion
+- Anwesenheitserfassung mit Beitrittszeiten, Dauer, Status und CSV-Export für Host, Co-Host und Operator
+- Gehärteter Dateiexport über den Electron-Hauptprozess mit Größen-, Dateinamen- und Erweiterungsprüfung
+
 ## 0.3.0 – Produktionsreife Live-Regie
 
 ### Live-Produktion

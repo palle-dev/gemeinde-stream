@@ -11,5 +11,7 @@ declare module "@base44/sdk" {
     "manage-rundown": true;
     "manage-organization": true;
     "manage-program-state": true;
+    "meeting-chat": true;
+    "meeting-attendance": true;
   }
 }

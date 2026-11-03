@@ -24,6 +24,11 @@ interface Window {
       releaseUrl: string;
     }>;
     openUpdate(releaseUrl: string): Promise<void>;
+    saveTextFile(
+      suggestedName: string,
+      contents: string,
+      extension?: "csv" | "txt" | "md" | "ics",
+    ): Promise<boolean>;
     onOpenJoinLink(callback: (joinCode: string) => void): () => void;
     listMedia(): Promise<
       Array<{

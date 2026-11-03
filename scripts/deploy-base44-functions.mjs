@@ -11,6 +11,8 @@ const functions = [
   "manage-rundown",
   "manage-organization",
   "manage-program-state",
+  "meeting-chat",
+  "meeting-attendance",
 ];
 
 console.log(

@@ -1,0 +1,21 @@
+{
+  "name": "MeetingMessage",
+  "type": "object",
+  "properties": {
+    "event_id": { "type": "string" },
+    "message_id": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "sender_identity": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "sender_name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "recipient_identity": { "type": "string", "maxLength": 200, "default": "" },
+    "recipient_name": { "type": "string", "maxLength": 80, "default": "" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "sent_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["event_id", "message_id", "sender_identity", "sender_name", "text", "sent_at"],
+  "rls": {
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
+  }
+}

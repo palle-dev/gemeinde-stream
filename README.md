@@ -26,6 +26,10 @@ Host, Co-Host und Operator können bei niedriger eingestuften Teilnehmern Mikrof
 
 Teilnehmer können mit 👍, ❤️, 🎉, 👏 oder 😂 reagieren. Die Reaktion wird über den LiveKit-Datenkanal verteilt, erscheint kurz über dem Kamerabild der Person und blendet sich anschließend automatisch aus.
 
+Der Meeting-Chat wird serverseitig gespeichert und nach einem Verbindungsabbruch oder Gerätewechsel wiederhergestellt. Eigene Nachrichten lassen sich löschen; die Berechtigungsprüfung erfolgt im Backend und nicht nur in der Oberfläche.
+
+Host, Co-Host und Operator können ein Anwesenheitsprotokoll mit Beitrittszeit, Gesamtdauer und aktuellem Status öffnen und als CSV-Datei exportieren. Die Erfassung arbeitet mit regelmäßigen Herzschlägen, damit auch unerwartete Verbindungsabbrüche im Bericht nachvollziehbar bleiben.
+
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.

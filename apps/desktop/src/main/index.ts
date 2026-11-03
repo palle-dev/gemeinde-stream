@@ -228,6 +228,48 @@ ipcMain.handle("diagnostics:export", async (event) => {
   return true;
 });
 
+ipcMain.handle(
+  "file:save-text",
+  async (
+    event,
+    suggestedName: unknown,
+    contents: unknown,
+    requestedExtension: unknown,
+  ) => {
+    assertTrustedSender(event.sender.id);
+    const text = String(contents ?? "");
+    if (!text || Buffer.byteLength(text, "utf8") > 5 * 1024 * 1024)
+      throw new Error("Der Export ist leer oder größer als 5 MB.");
+    const allowedExtensions = new Set(["csv", "txt", "md", "ics"]);
+    const extension = allowedExtensions.has(String(requestedExtension))
+      ? String(requestedExtension)
+      : "txt";
+    const rawName = basename(String(suggestedName ?? `Export.${extension}`));
+    const cleanBase = rawName
+      .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-")
+      .replace(/\.+$/g, "")
+      .trim()
+      .slice(0, 140);
+    const defaultPath = cleanBase.toLowerCase().endsWith(`.${extension}`)
+      ? cleanBase
+      : `${cleanBase || "Export"}.${extension}`;
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      title: "Datei speichern",
+      defaultPath,
+      filters: [
+        { name: `${extension.toUpperCase()}-Datei`, extensions: [extension] },
+      ],
+    };
+    const result = owner
+      ? await dialog.showSaveDialog(owner, options)
+      : await dialog.showSaveDialog(options);
+    if (result.canceled || !result.filePath) return false;
+    await writeFile(result.filePath, text, "utf8");
+    return true;
+  },
+);
+
 ipcMain.handle("update:check", async (event): Promise<ReleaseUpdate> => {
   assertTrustedSender(event.sender.id);
   const response = await net.fetch(

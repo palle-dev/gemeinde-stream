@@ -319,6 +319,10 @@ input::placeholder { color: #5e6977; }
 .side-tabs button { display: flex; justify-content: center; align-items: center; gap: 6px; }
 .participants-panel, .chat-panel { min-height: 0; flex: 1; display: flex; flex-direction: column; }
 .participants-panel { overflow-y: auto; }
+.participant-summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.participant-summary > span { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.participant-summary button, .attendance-open { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: #171e27; color: #cbd5df; font-size: 11px; }
+.participant-summary button:hover, .attendance-open:hover { color: var(--lime); border-color: #b8ff3d55; }
 .chat-messages { min-height: 0; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 3px; }
 .chat-message { padding: 9px 10px; background: #171e27; border: 1px solid var(--line); border-radius: 9px; }
 .chat-message.local { border-color: #35d5cc44; background: #122426; }
@@ -326,11 +330,37 @@ input::placeholder { color: #5e6977; }
 .chat-message b { font-size: 12px; }
 .chat-message time { color: var(--muted); font-size: 10px; }
 .chat-message p { margin: 5px 0 0; color: #dbe3eb; font-size: 13px; overflow-wrap: anywhere; }
+.chat-delete { float: right; margin: 4px 0 0 8px; padding: 3px; border: 0; background: transparent; color: var(--muted); }
+.chat-delete:hover:not(:disabled) { color: #ff8589; }
+.chat-delete:disabled { opacity: .35; }
 .chat-form { margin-top: 12px; display: grid; gap: 8px; }
 .chat-form input { width: 100%; }
 .chat-form button { display: flex; justify-content: center; align-items: center; gap: 7px; border: 0; border-radius: 8px; padding: 9px; background: var(--cyan); color: #071010; font-weight: 750; }
 .chat-form button:disabled { opacity: .4; }
 .inline-error { margin-top: 10px; color: #ff8f93; font-size: 12px; }
+.attendance-backdrop { z-index: 50; }
+.attendance-modal { width: min(900px, 100%); max-height: calc(100vh - 50px); overflow: hidden; display: flex; flex-direction: column; padding: 24px; border: 1px solid #303a47; border-radius: 16px; background: #111820; box-shadow: 0 30px 100px #000; }
+.attendance-modal > header, .attendance-modal > header > div, .attendance-modal > header span { display: flex; align-items: center; }
+.attendance-modal > header { justify-content: space-between; gap: 16px; }
+.attendance-modal > header > div { gap: 12px; }
+.attendance-modal > header > div > svg { color: var(--lime); }
+.attendance-modal > header span { align-items: flex-start; flex-direction: column; gap: 3px; }
+.attendance-modal > header b, .attendance-modal > header small { display: block; }
+.attendance-modal > header small { color: var(--muted); font-size: 11px; }
+.attendance-actions { display: flex; gap: 8px; margin: 18px 0 12px; }
+.attendance-actions button { display: flex; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; background: #19212b; color: #d7dee6; }
+.attendance-actions button svg { width: 15px; }
+.attendance-actions button:disabled { opacity: .35; }
+.attendance-warning { margin-bottom: 10px; padding: 9px 11px; border: 1px solid #ffd16655; border-radius: 8px; background: #2b2415; color: #ffd166; font-size: 12px; }
+.attendance-table { min-height: 0; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+.attendance-table-head, .attendance-row { display: grid; grid-template-columns: minmax(170px, 1.4fr) minmax(130px, 1fr) 90px 90px; align-items: center; gap: 12px; padding: 10px 12px; }
+.attendance-table-head { position: sticky; top: 0; z-index: 1; background: #19212b; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.attendance-row + .attendance-row { border-top: 1px solid var(--line); }
+.attendance-row b, .attendance-row small { display: block; }
+.attendance-row small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.attendance-row time, .attendance-row > span { font-size: 12px; }
+.attendance-row .present { color: var(--lime); }
+.attendance-row .left { color: var(--muted); }
 .meeting-recorder { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .meeting-recorder > button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #ff676d55; border-radius: 9px; background: #2c1519; color: #ffb0b3; text-align: left; }
 .meeting-recorder > button.recording { border-color: #ff676d; background: #561a20; animation: recording-pulse 1.6s ease-in-out infinite; }

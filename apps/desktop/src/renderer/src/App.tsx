@@ -54,6 +54,10 @@ import {
   useRaisedHands,
 } from "./components/MeetingCollaboration";
 import {
+  MeetingAttendanceReport,
+  useMeetingAttendance,
+} from "./components/MeetingAttendance";
+import {
   MEETING_REACTIONS,
   useMeetingReactions,
   type MeetingReaction,
@@ -1865,8 +1869,26 @@ function MeetingCanvas({
 }) {
   const { confirm } = useFeedback();
   const mediaParticipants = useRoomMedia(room, connected);
-  const { messages, send } = useMeetingChat(room, connected, fallbackName);
-  const { raisedIdentities, setRaised } = useRaisedHands(room, connected);
+  const canManageMeeting = ["host", "cohost", "operator"].includes(localRole);
+  const {
+    messages,
+    send,
+    remove: removeChatMessage,
+    sending: chatSending,
+    deletingIds: deletingChatIds,
+    error: chatError,
+  } = useMeetingChat(room, connected, eventId);
+  const { raisedIdentities, setRaised } = useRaisedHands(
+    room,
+    connected,
+    canManageMeeting,
+  );
+  const attendanceError = useMeetingAttendance(
+    eventId,
+    undefined,
+    connected,
+    fallbackName,
+  );
   const { reactions, sendReaction } = useMeetingReactions(room, connected);
   const participants = mediaParticipants.map((participant) => ({
     ...participant,
@@ -2030,6 +2052,16 @@ function MeetingCanvas({
         </div>
         {sideTab === "participants" ? (
           <div className="participants-panel">
+            <div className="participant-summary">
+              <span>
+                <Users size={15} /> {participants.length} verbunden
+              </span>
+              <MeetingAttendanceReport
+                eventId={eventId}
+                title={title}
+                canManage={canManageMeeting}
+              />
+            </div>
             {participants.length > 0 ? (
               participants.map((participant) => (
                 <div className="participant-row" key={participant.identity}>
@@ -2157,6 +2189,16 @@ function MeetingCanvas({
                       </time>
                     </div>
                     <p>{message.text}</p>
+                    {message.isLocal && (
+                      <button
+                        className="chat-delete"
+                        title="Nachricht löschen"
+                        disabled={deletingChatIds.has(message.id)}
+                        onClick={() => void removeChatMessage(message)}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
                   </div>
                 ))
               ) : (
@@ -2170,16 +2212,19 @@ function MeetingCanvas({
                 onChange={(event) => setChatText(event.target.value)}
                 placeholder="Nachricht schreiben …"
                 maxLength={2000}
-                disabled={!connected}
+                disabled={!connected || chatSending}
               />
-              <button disabled={!connected || !chatText.trim()}>
-                <MessageSquare size={16} /> Senden
+              <button disabled={!connected || !chatText.trim() || chatSending}>
+                <MessageSquare size={16} />
+                {chatSending ? "Wird gesendet …" : "Senden"}
               </button>
             </form>
           </div>
         )}
-        {collaborationError && (
-          <div className="inline-error">{collaborationError}</div>
+        {(collaborationError || chatError || attendanceError) && (
+          <div className="inline-error">
+            {collaborationError || chatError || attendanceError}
+          </div>
         )}
         <MeetingRecorder
           room={room}

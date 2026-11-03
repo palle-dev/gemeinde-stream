@@ -1,0 +1,23 @@
+{
+  "name": "AttendanceSession",
+  "type": "object",
+  "properties": {
+    "event_id": { "type": "string" },
+    "participant_identity": { "type": "string" },
+    "user_email": { "type": "string" },
+    "display_name": { "type": "string" },
+    "role": { "type": "string" },
+    "guest": { "type": "boolean", "default": false },
+    "joined_at": { "type": "string", "format": "date-time" },
+    "last_seen_at": { "type": "string", "format": "date-time" },
+    "left_at": { "type": "string", "format": "date-time" },
+    "duration_seconds": { "type": "number", "minimum": 0 }
+  },
+  "required": ["event_id", "participant_identity", "user_email", "display_name", "role", "guest", "joined_at", "last_seen_at"],
+  "rls": {
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
+  }
+}

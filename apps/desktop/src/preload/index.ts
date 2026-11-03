@@ -29,6 +29,17 @@ contextBridge.exposeInMainWorld("desktop", {
     }>,
   openUpdate: (releaseUrl: string) =>
     ipcRenderer.invoke("update:open", releaseUrl) as Promise<void>,
+  saveTextFile: (
+    suggestedName: string,
+    contents: string,
+    extension?: "csv" | "txt" | "md" | "ics",
+  ) =>
+    ipcRenderer.invoke(
+      "file:save-text",
+      suggestedName,
+      contents,
+      extension,
+    ) as Promise<boolean>,
   onOpenJoinLink: (callback: (joinCode: string) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, joinCode: string) =>
       callback(joinCode);
