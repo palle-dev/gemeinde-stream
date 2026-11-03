@@ -74,6 +74,8 @@ Meetings bieten eine umschaltbare Galerie- und Sprecheransicht. Die Sprecheransi
 
 Host, Co-Host und Operator können auch normale Meetings lokal im gewählten Produktionsprofil als WebM-Datei aufzeichnen. Die Aufnahme übernimmt die aktuell gewählte Galerie- oder Sprecheransicht, priorisiert Bildschirmfreigaben und mischt die Mikrofone aller verbundenen Teilnehmer; die Daten werden fortlaufend an den gewählten Speicherort geschrieben.
 
+Eine laufende lokale Meetingaufnahme wird allen verbundenen Personen sichtbar angezeigt. Der Aufnahmerechner sendet einen rollenautorisierten Status beim Start und Stopp sowie als kurzen Heartbeat; später Beitretende erhalten den Zustand automatisch. Bleibt der Heartbeat nach einem Rechnerausfall aus, verschwindet der Hinweis selbstständig. Aufnahmemeldungen gewöhnlicher Teilnehmer werden verworfen.
+
 Der Host kann verbundene Teilnehmer im Meeting und in der Live-Regie zu Co-Host, Operator, Sprecher, Teilnehmer oder Zuschauer ernennen. Die Änderung wird im Backend gespeichert; der betroffene Client trennt sich automatisch und erhält beim erneuten Beitritt ein LiveKit-Token mit den neuen Rechten. Zuschauer können weder Kamera, Mikrofon noch Bildschirm veröffentlichen.
 
 Beim Beitritt des Hosts wechselt eine geplante Veranstaltung auf „Live“. Der Host kann sie anschließend verbindlich für alle beenden; verbundene Clients verlassen den Raum automatisch und ein erneuter Beitritt wird serverseitig verhindert.

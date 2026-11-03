@@ -60,6 +60,7 @@ Apple-Silicon-Mac und vor der öffentlichen Freigabe auch ein Intel-Mac benötig
 | Private Nachricht senden, Ungelesen-Zähler prüfen und Chat als CSV exportieren | ☐ Bestanden ☐ Fehler | |
 | Alle Hände senken sowie alle moderierbaren Mikrofone und Kameras ausschalten | ☐ Bestanden ☐ Fehler | |
 | Moderation bittet um Mikrofonfreigabe; Teilnehmer kann sichtbar annehmen oder ablehnen | ☐ Bestanden ☐ Fehler | |
+| Lokale Meetingaufnahme wird allen Teilnehmern sichtbar und ausfallsicher angezeigt | ☐ Bestanden ☐ Fehler | |
 | Moderation kann Anwesenheitsprotokoll öffnen und als CSV exportieren | ☐ Bestanden ☐ Fehler | |
 | Gemeinsame Notizen speichern parallel, erkennen Konflikte und exportieren Markdown | ☐ Bestanden ☐ Fehler | |
 | Private Meeting-Datei hochladen, auf zweitem Client öffnen und berechtigt entfernen | ☐ Bestanden ☐ Fehler | |

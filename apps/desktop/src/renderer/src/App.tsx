@@ -2766,6 +2766,7 @@ function MeetingCanvas({
           layout={view}
           sources={recordingSources}
           enabled={canRecord && recordingEnabled}
+          connected={connected}
         />
       </aside>
     </main>

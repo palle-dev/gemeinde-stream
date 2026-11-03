@@ -18,6 +18,7 @@ import {
   useProductionPreflight,
 } from "./ProductionPreflight";
 import type { VideoMediaTrack } from "./RoomMedia";
+import { useMeetingRecordingSignal } from "./MeetingRecordingSignal";
 
 export type MeetingRecordingLayout = "gallery" | "speaker";
 
@@ -260,12 +261,14 @@ export function MeetingRecorder({
   layout,
   sources,
   enabled,
+  connected,
 }: {
   room: Room;
   title: string;
   layout: MeetingRecordingLayout;
   sources: MeetingRecordingSource[];
   enabled: boolean;
+  connected: boolean;
 }) {
   const [status, setStatus] = useState<
     "idle" | "starting" | "recording" | "saving" | "error"
@@ -425,8 +428,23 @@ export function MeetingRecorder({
   }
 
   const recording = status === "recording";
+  const remoteRecordings = useMeetingRecordingSignal(
+    room,
+    connected,
+    recording,
+    enabled,
+  );
   return (
     <div className="meeting-recorder">
+      {remoteRecordings.map((remoteRecording) => (
+        <div className="meeting-recording-notice" role="status" key={remoteRecording.senderIdentity}>
+          <Disc3 />
+          <span>
+            <b>Dieses Meeting wird aufgezeichnet</b>
+            <small>Lokale Aufnahme durch {remoteRecording.senderName}</small>
+          </span>
+        </div>
+      ))}
       {!recording && (
         <ProductionPreflight
           checks={preflight.checks}
