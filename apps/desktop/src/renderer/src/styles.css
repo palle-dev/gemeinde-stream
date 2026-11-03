@@ -265,7 +265,15 @@ input::placeholder { color: #5e6977; }
 .code-pill small { color: var(--muted); }
 .code-pill b { letter-spacing: .13em; }
 .code-pill svg { width: 16px; }
-.meeting-canvas { min-height: 0; display: grid; grid-template-columns: 1fr 310px; }
+.meeting-canvas { position: relative; min-height: 0; display: grid; grid-template-columns: 1fr 310px; }
+.unmute-request { position: absolute; z-index: 30; top: 18px; left: 50%; transform: translateX(-50%); width: min(680px, calc(100% - 48px)); display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 13px 14px; border: 1px solid #b8ff3d88; border-radius: 12px; background: #121b18f2; box-shadow: 0 14px 38px #000a; backdrop-filter: blur(12px); }
+.unmute-request > svg { color: var(--lime); }
+.unmute-request div { min-width: 0; display: grid; gap: 3px; }
+.unmute-request b { overflow: hidden; color: #f5f8f2; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.unmute-request span { color: var(--muted); font-size: 10px; }
+.unmute-request button { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 11px; font-weight: 750; }
+.unmute-request button.secondary { background: #1b232c; color: #d4dbe2; }
+.unmute-request button.primary { border-color: var(--lime); background: var(--lime); color: #10150b; }
 .meeting-video-area { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #070a0e; }
 .meeting-grid { height: 100%; padding: 64px 22px 22px; display: grid; grid-template-columns: repeat(2, minmax(300px, 1fr)); grid-auto-rows: minmax(250px, 1fr); gap: 14px; overflow-y: auto; background: #070a0e; }
 .meeting-view-switch { position: absolute; z-index: 6; top: 16px; right: 22px; display: flex; gap: 5px; padding: 4px; border: 1px solid var(--line); border-radius: 9px; background: #101720e8; backdrop-filter: blur(8px); }

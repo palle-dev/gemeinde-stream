@@ -1,8 +1,8 @@
 import { createClientFromRequest } from "npm:@base44/sdk";
 import { RoomServiceClient, TrackSource } from "npm:livekit-server-sdk";
+import { memberCanModerate, validParticipantIdentity } from "./logic.ts";
 
 const assignableRoles = ["cohost", "operator", "speaker", "participant", "viewer"];
-const roleRank: Record<string, number> = { host: 3, cohost: 2, operator: 2, speaker: 1, participant: 1, viewer: 1 };
 
 function roomService() {
   const apiKey = Deno.env.get("LIVEKIT_API_KEY");
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
       const member = memberId ? await base44.asServiceRole.entities.RoomMember.get(memberId) : null;
       if (!member || member.event_id !== event.id) return Response.json({ error: "Mitglied nicht gefunden" }, { status: 404 });
       if (member.user_email === event.host_email) return Response.json({ error: "Der Host kann nicht entfernt werden" }, { status: 409 });
-      if (user.role !== "admin" && roleRank[String(actorRole)] <= roleRank[String(member.role)]) {
+      if (!memberCanModerate(actorRole, member.role, user.role === "admin")) {
         return Response.json({ error: "Dieses Mitglied darf nicht entfernt werden" }, { status: 403 });
       }
       if (member.participant_identity && !usesLocalLiveKit()) {
@@ -93,14 +93,14 @@ Deno.serve(async (req) => {
     }
 
     if (action === "block") {
-      if (!participantIdentity) return Response.json({ error: "Teilnehmer fehlt" }, { status: 400 });
+      if (!validParticipantIdentity(participantIdentity)) return Response.json({ error: "Teilnehmer fehlt oder ist ungültig" }, { status: 400 });
       const matches = await base44.asServiceRole.entities.RoomMember.filter({
         event_id: event.id,
         participant_identity: participantIdentity,
       });
       const member = matches[0];
       if (!member) return Response.json({ error: "Teilnehmer wurde nicht gefunden" }, { status: 404 });
-      if (member.user_email === event.host_email || roleRank[String(actorRole)] <= roleRank[String(member.role)]) {
+      if (member.user_email === event.host_email || !memberCanModerate(actorRole, member.role, user.role === "admin")) {
         return Response.json({ error: "Diese Person darf nicht entfernt werden" }, { status: 403 });
       }
       const updated = await base44.asServiceRole.entities.RoomMember.update(member.id, {
@@ -115,11 +115,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "mute" || action === "camera_off") {
-      if (!participantIdentity) return Response.json({ error: "Teilnehmer fehlt" }, { status: 400 });
+      if (!validParticipantIdentity(participantIdentity)) return Response.json({ error: "Teilnehmer fehlt oder ist ungültig" }, { status: 400 });
       const matches = await base44.asServiceRole.entities.RoomMember.filter({ event_id: event.id, participant_identity: participantIdentity });
       const member = matches[0];
       if (!member) return Response.json({ error: "Teilnehmer wurde nicht gefunden" }, { status: 404 });
-      if (member.user_email === event.host_email || roleRank[String(actorRole)] <= roleRank[String(member.role)]) {
+      if (member.user_email === event.host_email || !memberCanModerate(actorRole, member.role, user.role === "admin")) {
         return Response.json({ error: "Diese Person darf nicht moderiert werden" }, { status: 403 });
       }
       if (!usesLocalLiveKit()) {
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Nur der Host darf Rollen vergeben" }, { status: 403 });
     }
 
-    if (!participantIdentity || !assignableRoles.includes(role)) {
+    if (!validParticipantIdentity(participantIdentity) || !assignableRoles.includes(role)) {
       return Response.json({ error: "Ungültige Rollenänderung" }, { status: 400 });
     }
 

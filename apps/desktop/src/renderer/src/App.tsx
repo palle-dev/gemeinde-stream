@@ -38,6 +38,7 @@ import {
   UserPlus,
   UserMinus,
   Video,
+  Volume2,
   VolumeX,
   Wifi,
   WifiOff,
@@ -1703,6 +1704,10 @@ function Studio({
     setMic(false);
     setMediaMessage("Ihr Mikrofon wurde von der Moderation stummgeschaltet");
   }, []);
+  const handleModerationUnmute = useCallback(() => {
+    setMic(true);
+    setMediaMessage("Mikrofon nach Ihrer Zustimmung eingeschaltet");
+  }, []);
   const handleModerationRemove = useCallback(() => {
     notify("Sie wurden von der Moderation aus dem Raum entfernt.", "warning");
     onLeave();
@@ -1886,6 +1891,7 @@ function Studio({
           recordingEnabled={event.recording_enabled ?? true}
           activeBreakout={activeBreakout}
           onModerationMute={handleModerationMute}
+          onModerationUnmute={handleModerationUnmute}
           onModerationRemove={handleModerationRemove}
           onAssignRole={assignRole}
           onJoinBreakout={joinBreakout}
@@ -1995,6 +2001,7 @@ function MeetingCanvas({
   recordingEnabled,
   activeBreakout,
   onModerationMute,
+  onModerationUnmute,
   onModerationRemove,
   onAssignRole,
   onJoinBreakout,
@@ -2009,6 +2016,7 @@ function MeetingCanvas({
   recordingEnabled: boolean;
   activeBreakout: BreakoutAssignment | null;
   onModerationMute: () => void;
+  onModerationUnmute: () => void;
   onModerationRemove: () => void;
   onAssignRole: (identity: string, role: AssignableRole) => Promise<void>;
   onJoinBreakout: (credentials: {
@@ -2089,12 +2097,14 @@ function MeetingCanvas({
     ...participant,
     handRaised: raisedIdentities.has(participant.identity),
   }));
-  const { moderate } = useMeetingModeration(
+  const { moderate, unmuteRequest, acceptUnmute, declineUnmute } = useMeetingModeration(
     room,
     connected,
     localRole,
     onModerationMute,
     onModerationRemove,
+    undefined,
+    onModerationUnmute,
   );
   const [sideTab, setSideTab] = useState<
     | "participants"
@@ -2223,7 +2233,7 @@ function MeetingCanvas({
 
   async function moderateParticipant(
     participant: ParticipantMedia,
-    action: "mute" | "camera_off" | "remove",
+    action: "mute" | "camera_off" | "remove" | "request_unmute",
   ) {
     if (
       action === "remove" &&
@@ -2236,12 +2246,23 @@ function MeetingCanvas({
     )
       return;
     try {
-      await base44.functions.invoke("manage-room-member", {
-        eventId,
-        action: action === "remove" ? "block" : action,
-        participantIdentity: participant.identity,
-      });
+      if (action !== "request_unmute") {
+        await base44.functions.invoke("manage-room-member", {
+          eventId,
+          action: action === "remove" ? "block" : action,
+          participantIdentity: participant.identity,
+        });
+      }
       await moderate(participant.identity, participant.role, action);
+      setCollaborationError("");
+    } catch (error) {
+      setCollaborationError(messageOf(error));
+    }
+  }
+
+  async function allowUnmute() {
+    try {
+      await acceptUnmute();
       setCollaborationError("");
     } catch (error) {
       setCollaborationError(messageOf(error));
@@ -2309,6 +2330,17 @@ function MeetingCanvas({
   }));
   return (
     <main className="meeting-canvas">
+      {unmuteRequest && (
+        <section className="unmute-request" role="alertdialog" aria-label="Mikrofonanfrage">
+          <Volume2 size={21} />
+          <div>
+            <b>{unmuteRequest.senderName} bittet Sie, Ihr Mikrofon einzuschalten.</b>
+            <span>Nur Sie können Ihr Mikrofon freigeben.</span>
+          </div>
+          <button className="secondary" onClick={declineUnmute}>Ablehnen</button>
+          <button className="primary" onClick={() => void allowUnmute()}>Mikrofon einschalten</button>
+        </section>
+      )}
       <MeetingVideoArea
         tiles={tiles}
         connected={connected}
@@ -2488,6 +2520,15 @@ function MeetingCanvas({
                             }
                           >
                             <VolumeX size={15} />
+                          </button>
+                          <button
+                            disabled={!participant.microphoneMuted}
+                            title="Um Mikrofonfreigabe bitten"
+                            onClick={() =>
+                              void moderateParticipant(participant, "request_unmute")
+                            }
+                          >
+                            <Volume2 size={15} />
                           </button>
                           <button
                             disabled={!participant.cameraTrack}
