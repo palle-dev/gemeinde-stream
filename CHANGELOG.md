@@ -19,6 +19,8 @@
 - Optionale deutsche Live-Untertitel über die lokale System-Spracherkennung mit lokalem, exportierbarem Besprechungsprotokoll
 - Serverautorisierte Spotlight-Steuerung für Kamera- und Bildschirmquellen sowie persönliche lokale Fixierung
 - Breakout-Räume mit automatischer oder manueller Zuweisung, sicheren Raumtokens und kontrollierter Rückkehr ins Hauptmeeting
+- Private Chatnachrichten, Ungelesen-Zähler, Chat-CSV-Export und serverautorisierte Moderationslöschung
+- Gebündelte Moderationsaktionen zum Senken aller Hände sowie Ausschalten moderierbarer Mikrofone und Kameras
 - Vollständiger Abgleich der Base44-Schemata für Serienveranstaltungen, Einladungsstatus, Regiezustand und Erinnerungen
 - Gehärteter Dateiexport über den Electron-Hauptprozess mit Größen-, Dateinamen- und Erweiterungsprüfung
 

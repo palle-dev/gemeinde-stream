@@ -24,9 +24,13 @@ Während eines laufenden Meetings kann der Host den Raum zusätzlich sperren und
 
 Host, Co-Host und Operator können bei niedriger eingestuften Teilnehmern Mikrofon oder Kamera ausschalten. Entfernte Personen werden zusätzlich serverseitig blockiert und können dem Raum nicht erneut beitreten; Host und gleichrangige Moderatoren sind durch eine Backend-Prüfung geschützt.
 
+Für größere Meetings stehen Sammelaktionen zur Verfügung: alle offenen Wortmeldungen senken, alle moderierbaren Mikrofone stummschalten oder deren Kameras ausschalten. Jede Einzelaktion bleibt serverseitig rollen- und zielgeprüft.
+
 Teilnehmer können mit 👍, ❤️, 🎉, 👏 oder 😂 reagieren. Die Reaktion wird über den LiveKit-Datenkanal verteilt, erscheint kurz über dem Kamerabild der Person und blendet sich anschließend automatisch aus.
 
 Der Meeting-Chat wird serverseitig gespeichert und nach einem Verbindungsabbruch oder Gerätewechsel wiederhergestellt. Eigene Nachrichten lassen sich löschen; die Berechtigungsprüfung erfolgt im Backend und nicht nur in der Oberfläche.
+
+Nachrichten können wahlweise an alle oder privat an eine verbundene Person gesendet werden. Ein Zähler weist außerhalb des Chatbereichs auf ungelesene Nachrichten hin; der sichtbare Verlauf lässt sich als CSV exportieren. Die Moderation kann öffentliche problematische Nachrichten für alle entfernen.
 
 Host, Co-Host und Operator können ein Anwesenheitsprotokoll mit Beitrittszeit, Gesamtdauer und aktuellem Status öffnen und als CSV-Datei exportieren. Die Erfassung arbeitet mit regelmäßigen Herzschlägen, damit auch unerwartete Verbindungsabbrüche im Bericht nachvollziehbar bleiben.
 

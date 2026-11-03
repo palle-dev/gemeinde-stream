@@ -59,6 +59,8 @@ import {
   type VideoMediaTrack,
 } from "./components/RoomMedia";
 import {
+  meetingChatCsv,
+  unreadMeetingMessageIds,
   useMeetingChat,
   useRaisedHands,
 } from "./components/MeetingCollaboration";
@@ -2029,7 +2031,7 @@ function MeetingCanvas({
     deletingIds: deletingChatIds,
     error: chatError,
   } = useMeetingChat(room, connected, eventId);
-  const { raisedIdentities, setRaised } = useRaisedHands(
+  const { raisedIdentities, setRaised, lowerRaised } = useRaisedHands(
     room,
     connected,
     canManageMeeting,
@@ -2105,10 +2107,37 @@ function MeetingCanvas({
   >("participants");
   const [view, setView] = useState<MeetingRecordingLayout>("gallery");
   const [chatText, setChatText] = useState("");
+  const [chatRecipientIdentity, setChatRecipientIdentity] = useState("");
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const readChatIdsRef = useRef(new Set<string>());
   const [collaborationError, setCollaborationError] = useState("");
   const localHandRaised =
     participants.find((participant) => participant.isLocal)?.handRaised ??
     false;
+  const chatRecipients = participants.filter((participant) => !participant.isLocal);
+  const moderatableParticipants = participants.filter(
+    (participant) =>
+      !participant.isLocal && canModerateRole(localRole, participant.role),
+  );
+  useEffect(() => {
+    if (
+      chatRecipientIdentity &&
+      !chatRecipients.some(
+        (participant) => participant.identity === chatRecipientIdentity,
+      )
+    )
+      setChatRecipientIdentity("");
+  }, [chatRecipientIdentity, chatRecipients]);
+  useEffect(() => {
+    if (sideTab === "chat") {
+      messages.forEach((message) => readChatIdsRef.current.add(message.id));
+      setUnreadChatCount(0);
+      return;
+    }
+    setUnreadChatCount(
+      unreadMeetingMessageIds(messages, readChatIdsRef.current).length,
+    );
+  }, [messages, sideTab]);
   const latestReactions = useMemo(() => {
     const latest = new Map<string, MeetingReaction>();
     reactions.forEach((reaction) =>
@@ -2143,8 +2172,31 @@ function MeetingCanvas({
     event.preventDefault();
     if (!chatText.trim()) return;
     try {
-      await send(chatText);
+      const recipient = chatRecipients.find(
+        (participant) => participant.identity === chatRecipientIdentity,
+      );
+      await send(
+        chatText,
+        recipient
+          ? { identity: recipient.identity, name: recipient.name }
+          : undefined,
+      );
       setChatText("");
+      setCollaborationError("");
+    } catch (error) {
+      setCollaborationError(messageOf(error));
+    }
+  }
+
+  async function exportChat() {
+    const safeTitle =
+      title.replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, "-").trim() || "Meeting";
+    try {
+      await window.desktop.saveTextFile(
+        `${safeTitle}-Chat.csv`,
+        meetingChatCsv(messages),
+        "csv",
+      );
       setCollaborationError("");
     } catch (error) {
       setCollaborationError(messageOf(error));
@@ -2194,6 +2246,43 @@ function MeetingCanvas({
     } catch (error) {
       setCollaborationError(messageOf(error));
     }
+  }
+
+  async function lowerAllHands() {
+    const targets = participants.filter(
+      (participant) => !participant.isLocal && participant.handRaised,
+    );
+    const results = await Promise.allSettled(
+      targets.map((participant) => lowerRaised(participant.identity)),
+    );
+    const failed = results.filter((result) => result.status === "rejected").length;
+    setCollaborationError(
+      failed ? `${failed} Wortmeldung(en) konnten nicht gesenkt werden.` : "",
+    );
+  }
+
+  async function moderateAll(action: "mute" | "camera_off") {
+    const targets = moderatableParticipants.filter((participant) =>
+      action === "mute"
+        ? !participant.microphoneMuted
+        : Boolean(participant.cameraTrack),
+    );
+    const results = await Promise.allSettled(
+      targets.map(async (participant) => {
+        await base44.functions.invoke("manage-room-member", {
+          eventId,
+          action,
+          participantIdentity: participant.identity,
+        });
+        await moderate(participant.identity, participant.role, action);
+      }),
+    );
+    const failed = results.filter((result) => result.status === "rejected").length;
+    setCollaborationError(
+      failed
+        ? `${failed} von ${targets.length} Moderationsaktionen sind fehlgeschlagen.`
+        : "",
+    );
   }
 
   async function changeRole(
@@ -2251,6 +2340,14 @@ function MeetingCanvas({
             onClick={() => setSideTab("chat")}
           >
             <MessageSquare size={15} /> Chat
+            {unreadChatCount > 0 && (
+              <span
+                className="tab-badge"
+                title={`${unreadChatCount} ungelesene Nachricht(en)`}
+              >
+                {unreadChatCount > 99 ? "99+" : unreadChatCount}
+              </span>
+            )}
           </button>
           <button
             className={sideTab === "poll" ? "active" : ""}
@@ -2289,11 +2386,49 @@ function MeetingCanvas({
               <span>
                 <Users size={15} /> {participants.length} verbunden
               </span>
-              <MeetingAttendanceReport
-                eventId={eventId}
-                title={title}
-                canManage={canManageMeeting}
-              />
+              {canManageMeeting && (
+                <div className="participant-summary-actions">
+                  <MeetingAttendanceReport
+                    eventId={eventId}
+                    title={title}
+                    canManage
+                  />
+                  <button
+                    title="Alle Wortmeldungen senken"
+                    disabled={
+                      !participants.some(
+                        (participant) =>
+                          !participant.isLocal && participant.handRaised,
+                      )
+                    }
+                    onClick={() => void lowerAllHands()}
+                  >
+                    <Hand size={14} /> Hände
+                  </button>
+                  <button
+                    title="Alle moderierbaren Teilnehmer stummschalten"
+                    disabled={
+                      !moderatableParticipants.some(
+                        (participant) => !participant.microphoneMuted,
+                      )
+                    }
+                    onClick={() => void moderateAll("mute")}
+                  >
+                    <MicOff size={14} /> Stumm
+                  </button>
+                  <button
+                    title="Alle moderierbaren Kameras ausschalten"
+                    disabled={
+                      !moderatableParticipants.some((participant) =>
+                        Boolean(participant.cameraTrack),
+                      )
+                    }
+                    onClick={() => void moderateAll("camera_off")}
+                  >
+                    <CameraOff size={14} /> Kameras
+                  </button>
+                </div>
+              )}
             </div>
             {participants.length > 0 ? (
               participants.map((participant) => (
@@ -2423,40 +2558,82 @@ function MeetingCanvas({
           </div>
         ) : sideTab === "chat" ? (
           <div className="chat-panel">
+            <div className="chat-heading">
+              <span>{messages.length} Nachricht(en)</span>
+              <button
+                disabled={!messages.length}
+                onClick={() => void exportChat()}
+              >
+                <Download size={14} /> Exportieren
+              </button>
+            </div>
             <div className="chat-messages">
               {messages.length > 0 ? (
-                messages.map((message) => (
-                  <div
-                    className={`chat-message ${message.isLocal ? "local" : ""}`}
-                    key={message.id}
-                  >
-                    <div>
-                      <b>{message.senderName}</b>
-                      <time>
-                        {new Date(message.sentAt).toLocaleTimeString("de-DE", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </time>
+                messages.map((message) => {
+                  const canDelete =
+                    message.isLocal ||
+                    (canManageMeeting && !message.recipientIdentity);
+                  return (
+                    <div
+                      className={`chat-message ${message.isLocal ? "local" : ""}`}
+                      key={message.id}
+                    >
+                      <div>
+                        <b>
+                          {message.senderName}
+                          {message.recipientName && (
+                            <small>
+                              {` · Privat ${message.isLocal ? `an ${message.recipientName}` : "an Sie"}`}
+                            </small>
+                          )}
+                        </b>
+                        <span>
+                          <time>
+                            {new Date(message.sentAt).toLocaleTimeString(
+                              "de-DE",
+                              { hour: "2-digit", minute: "2-digit" },
+                            )}
+                          </time>
+                          {canDelete && (
+                            <button
+                              className="chat-delete"
+                              title={
+                                message.isLocal
+                                  ? "Eigene Nachricht für alle löschen"
+                                  : "Öffentliche Nachricht moderieren"
+                              }
+                              disabled={deletingChatIds.has(message.id)}
+                              onClick={() => void removeChatMessage(message)}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </span>
+                      </div>
+                      <p>{message.text}</p>
                     </div>
-                    <p>{message.text}</p>
-                    {message.isLocal && (
-                      <button
-                        className="chat-delete"
-                        title="Nachricht löschen"
-                        disabled={deletingChatIds.has(message.id)}
-                        onClick={() => void removeChatMessage(message)}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="side-empty">Noch keine Nachrichten</p>
               )}
             </div>
             <form className="chat-form" onSubmit={submitChat}>
+              <select
+                aria-label="Chatempfänger"
+                value={chatRecipientIdentity}
+                onChange={(event) =>
+                  setChatRecipientIdentity(event.target.value)
+                }
+                disabled={!connected || chatSending}
+              >
+                <option value="">Nachricht an alle</option>
+                {chatRecipients.map((participant) => (
+                  <option key={participant.identity} value={participant.identity}>
+                    Privat an {participant.name}
+                  </option>
+                ))}
+              </select>
               <input
                 aria-label="Chatnachricht"
                 value={chatText}

@@ -57,6 +57,8 @@ Apple-Silicon-Mac und vor der öffentlichen Freigabe auch ein Intel-Mac benötig
 | Meeting-Client zeigt und öffnet keine Live-Produktionen | ☐ Bestanden ☐ Fehler | |
 | `gemeinde-meeting://` öffnet direkt das richtige Meeting | ☐ Bestanden ☐ Fehler | |
 | Chat bleibt nach Neuverbindung erhalten und eigene Nachrichten lassen sich löschen | ☐ Bestanden ☐ Fehler | |
+| Private Nachricht senden, Ungelesen-Zähler prüfen und Chat als CSV exportieren | ☐ Bestanden ☐ Fehler | |
+| Alle Hände senken sowie alle moderierbaren Mikrofone und Kameras ausschalten | ☐ Bestanden ☐ Fehler | |
 | Moderation kann Anwesenheitsprotokoll öffnen und als CSV exportieren | ☐ Bestanden ☐ Fehler | |
 | Gemeinsame Notizen speichern parallel, erkennen Konflikte und exportieren Markdown | ☐ Bestanden ☐ Fehler | |
 | Private Meeting-Datei hochladen, auf zweitem Client öffnen und berechtigt entfernen | ☐ Bestanden ☐ Fehler | |
