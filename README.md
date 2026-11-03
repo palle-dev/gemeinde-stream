@@ -30,6 +30,10 @@ Der Meeting-Chat wird serverseitig gespeichert und nach einem Verbindungsabbruch
 
 Host, Co-Host und Operator können ein Anwesenheitsprotokoll mit Beitrittszeit, Gesamtdauer und aktuellem Status öffnen und als CSV-Datei exportieren. Die Erfassung arbeitet mit regelmäßigen Herzschlägen, damit auch unerwartete Verbindungsabbrüche im Bericht nachvollziehbar bleiben.
 
+Alle zugelassenen Teilnehmer außer Zuschauern können gemeinsame Meeting-Notizen bearbeiten. Automatische Speicherung, lokale Entwurfssicherung, Versionshistorie und bewusste Konfliktauflösung schützen parallele Änderungen; der aktuelle Stand lässt sich als Markdown exportieren.
+
+Angemeldete Teilnehmer können PDF-, Office-, Text- und Bilddateien bis 25 MB privat zum Meeting bereitstellen. Das Backend autorisiert jeden Upload vorab, speichert nur private Dateiverweise und erzeugt beim Abruf kurzlebige Downloadlinks. Entfernen dürfen nur der ursprüngliche Uploader oder die Moderation.
+
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.

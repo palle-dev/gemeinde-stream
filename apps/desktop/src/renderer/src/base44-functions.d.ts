@@ -13,5 +13,7 @@ declare module "@base44/sdk" {
     "manage-program-state": true;
     "meeting-chat": true;
     "meeting-attendance": true;
+    "meeting-notes": true;
+    "meeting-files": true;
   }
 }

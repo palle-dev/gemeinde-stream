@@ -13,6 +13,8 @@ const functions = [
   "manage-program-state",
   "meeting-chat",
   "meeting-attendance",
+  "meeting-notes",
+  "meeting-files",
 ];
 
 console.log(

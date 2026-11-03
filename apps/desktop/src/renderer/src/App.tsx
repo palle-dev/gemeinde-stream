@@ -8,6 +8,7 @@ import {
   CameraOff,
   Check,
   Clipboard,
+  Download,
   Eye,
   EyeOff,
   Hand,
@@ -24,6 +25,7 @@ import {
   Radio,
   Settings,
   ShieldCheck,
+  FileText,
   Trash2,
   Users,
   UserPlus,
@@ -57,6 +59,8 @@ import {
   MeetingAttendanceReport,
   useMeetingAttendance,
 } from "./components/MeetingAttendance";
+import { MeetingNotes } from "./components/MeetingNotes";
+import { MeetingFiles } from "./components/MeetingFiles";
 import {
   MEETING_REACTIONS,
   useMeetingReactions,
@@ -1901,9 +1905,9 @@ function MeetingCanvas({
     onModerationMute,
     onModerationRemove,
   );
-  const [sideTab, setSideTab] = useState<"participants" | "chat">(
-    "participants",
-  );
+  const [sideTab, setSideTab] = useState<
+    "participants" | "chat" | "files" | "notes"
+  >("participants");
   const [view, setView] = useState<MeetingRecordingLayout>("gallery");
   const [chatText, setChatText] = useState("");
   const [collaborationError, setCollaborationError] = useState("");
@@ -2049,6 +2053,18 @@ function MeetingCanvas({
           >
             <MessageSquare size={15} /> Chat
           </button>
+          <button
+            className={sideTab === "files" ? "active" : ""}
+            onClick={() => setSideTab("files")}
+          >
+            <Download size={15} /> Dateien
+          </button>
+          <button
+            className={sideTab === "notes" ? "active" : ""}
+            onClick={() => setSideTab("notes")}
+          >
+            <FileText size={15} /> Notizen
+          </button>
         </div>
         {sideTab === "participants" ? (
           <div className="participants-panel">
@@ -2170,7 +2186,7 @@ function MeetingCanvas({
               ))}
             </div>
           </div>
-        ) : (
+        ) : sideTab === "chat" ? (
           <div className="chat-panel">
             <div className="chat-messages">
               {messages.length > 0 ? (
@@ -2220,6 +2236,19 @@ function MeetingCanvas({
               </button>
             </form>
           </div>
+        ) : sideTab === "files" ? (
+          <MeetingFiles
+            eventId={eventId}
+            connected={connected}
+            room={room}
+          />
+        ) : (
+          <MeetingNotes
+            eventId={eventId}
+            title={title}
+            connected={connected}
+            room={room}
+          />
         )}
         {(collaborationError || chatError || attendanceError) && (
           <div className="inline-error">
