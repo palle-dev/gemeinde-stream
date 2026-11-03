@@ -1,0 +1,20 @@
+{
+  "name": "BreakoutAssignment",
+  "type": "object",
+  "properties": {
+    "event_id": { "type": "string" },
+    "participant_identity": { "type": "string" },
+    "breakout_id": { "type": "string" },
+    "breakout_name": { "type": "string" },
+    "active": { "type": "boolean", "default": true },
+    "assigned_by": { "type": "string" },
+    "closed_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["event_id", "participant_identity", "breakout_id", "breakout_name", "active", "assigned_by"],
+  "rls": {
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
+  }
+}

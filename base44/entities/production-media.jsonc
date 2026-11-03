@@ -1,0 +1,22 @@
+{
+  "name": "ProductionMedia",
+  "type": "object",
+  "properties": {
+    "event_id": { "type": "string" },
+    "owner_email": { "type": "string", "format": "email" },
+    "asset_id": { "type": "string" },
+    "name": { "type": "string", "maxLength": 255 },
+    "media_type": { "type": "string", "enum": ["image", "video", "audio"] },
+    "file_url": { "type": "string", "format": "uri" },
+    "file_uri": { "type": "string", "maxLength": 2048 },
+    "size_bytes": { "type": "integer", "minimum": 0 },
+    "uploaded_by": { "type": "string", "format": "email" }
+  },
+  "required": ["event_id", "owner_email", "asset_id", "name", "media_type", "uploaded_by"],
+  "rls": {
+    "create": { "data.owner_email": "{{user.email}}" },
+    "read": { "$or": [{ "data.owner_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "update": { "$or": [{ "data.owner_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] },
+    "delete": { "$or": [{ "data.owner_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } }] }
+  }
+}

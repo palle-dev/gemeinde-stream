@@ -21,8 +21,9 @@ const functions = [
 console.log(
   `Deploye ${functions.length} freigegebene Funktionen nach ${appId}. Entitätsschemata werden nicht verändert.`,
 );
+const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
 const result = spawnSync(
-  "npx",
+  npxCommand,
   [
     "--no-install",
     "base44",
