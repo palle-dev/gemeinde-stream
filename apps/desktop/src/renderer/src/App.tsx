@@ -10,6 +10,7 @@ import {
   Check,
   Clipboard,
   Download,
+  DoorOpen,
   Eye,
   EyeOff,
   Hand,
@@ -77,6 +78,11 @@ import {
 } from "./components/MeetingCaptions";
 import { MeetingTranscript } from "./components/MeetingTranscript";
 import { useMeetingSpotlight } from "./components/MeetingSpotlight";
+import {
+  BreakoutRoomsPanel,
+  useBreakoutRooms,
+  type BreakoutAssignment,
+} from "./components/BreakoutRooms";
 import {
   MEETING_REACTIONS,
   useMeetingReactions,
@@ -1435,6 +1441,8 @@ function Studio({
   const [meetingLocked, setMeetingLocked] = useState(
     event.meeting_locked ?? false,
   );
+  const [activeBreakout, setActiveBreakout] =
+    useState<BreakoutAssignment | null>(null);
   const media = useMemo(() => new MediaRoom(setConnection), []);
   const lastPreferences = useRef<MediaPreferences | null>(null);
   const joining = useRef(false);
@@ -1535,6 +1543,106 @@ function Studio({
       );
     } finally {
       joining.current = false;
+    }
+  }
+
+  async function switchMediaRoom(
+    credentials: { serverUrl: string; participantToken: string },
+    breakout: BreakoutAssignment | null,
+  ) {
+    const preferences = lastPreferences.current;
+    if (!preferences)
+      throw new Error("Die Medieneinstellungen sind nicht verfügbar.");
+    const restoreMicrophone = mic;
+    const restoreCamera = camera;
+    const restoreSharing = sharing;
+    const warnings: string[] = [];
+    await media.disconnect();
+    await media.connect(credentials.serverUrl, credentials.participantToken);
+    try {
+      await media.applyDevices(preferences);
+    } catch (error) {
+      warnings.push(`Geräteauswahl: ${messageOf(error)}`);
+    }
+    let microphoneRestored = false;
+    let cameraRestored = false;
+    if (restoreMicrophone && participantRole !== "viewer") {
+      try {
+        await media.setMicrophone(true);
+        microphoneRestored = true;
+      } catch (error) {
+        warnings.push(`Mikrofon: ${messageOf(error)}`);
+      }
+    }
+    if (restoreCamera && participantRole !== "viewer") {
+      try {
+        await media.setCamera(true);
+        cameraRestored = true;
+      } catch (error) {
+        warnings.push(`Kamera: ${messageOf(error)}`);
+      }
+    }
+    setMic(microphoneRestored);
+    setCamera(cameraRestored);
+    if (restoreSharing) {
+      setSharing(false);
+      warnings.push(
+        "Die Bildschirmfreigabe muss nach dem Raumwechsel erneut gestartet werden.",
+      );
+    }
+    setActiveBreakout(breakout);
+    const destination = breakout
+      ? `Verbunden mit „${breakout.breakoutName}“`
+      : "Zurück im Hauptraum";
+    setMediaMessage(
+      warnings.length ? `${destination}. ${warnings.join(" ")}` : destination,
+    );
+  }
+
+  async function joinBreakout(credentials: {
+    serverUrl: string;
+    participantToken: string;
+    breakoutId: string;
+    breakoutName: string;
+    active: boolean;
+  }) {
+    await switchMediaRoom(credentials, {
+      breakoutId: credentials.breakoutId,
+      breakoutName: credentials.breakoutName,
+      active: credentials.active,
+    });
+  }
+
+  async function returnToMainRoom(assignmentAlreadyClosed = false) {
+    try {
+      if (activeBreakout && !assignmentAlreadyClosed)
+        await base44.functions.invoke("breakout-room", {
+          eventId: event.id,
+          action: "leave",
+        });
+      const displayName =
+        lastPreferences.current?.displayName || user.full_name || user.email;
+      const credentials = unwrap(
+        (await base44.functions.invoke("create-livekit-token", {
+          eventId: event.id,
+          displayName,
+        })) as FunctionEnvelope<{
+          serverUrl?: string;
+          participantToken?: string;
+        }>,
+      );
+      if (!credentials.serverUrl || !credentials.participantToken)
+        throw new Error("Der Zugang zum Hauptraum ist unvollständig.");
+      await switchMediaRoom(
+        {
+          serverUrl: credentials.serverUrl,
+          participantToken: credentials.participantToken,
+        },
+        null,
+      );
+    } catch (error) {
+      setMediaMessage(messageOf(error));
+      if (assignmentAlreadyClosed) throw error;
     }
   }
 
@@ -1774,9 +1882,12 @@ function Studio({
           fallbackName={user.full_name || user.email}
           localRole={participantRole}
           recordingEnabled={event.recording_enabled ?? true}
+          activeBreakout={activeBreakout}
           onModerationMute={handleModerationMute}
           onModerationRemove={handleModerationRemove}
           onAssignRole={assignRole}
+          onJoinBreakout={joinBreakout}
+          onReturnMain={returnToMainRoom}
         />
       ) : (
         <BroadcastCanvas
@@ -1841,6 +1952,14 @@ function Studio({
               : "Verbindung wird aufgebaut …"}
         </button>
         <div className="leave-actions">
+          {event.mode === "meeting" && activeBreakout && (
+            <button
+              className="lock-button active"
+              onClick={() => void returnToMainRoom()}
+            >
+              <DoorOpen /> Hauptraum
+            </button>
+          )}
           {event.mode === "meeting" && participantRole === "host" && (
             <button
               className={`lock-button ${meetingLocked ? "active" : ""}`}
@@ -1872,9 +1991,12 @@ function MeetingCanvas({
   fallbackName,
   localRole,
   recordingEnabled,
+  activeBreakout,
   onModerationMute,
   onModerationRemove,
   onAssignRole,
+  onJoinBreakout,
+  onReturnMain,
 }: {
   eventId: string;
   title: string;
@@ -1883,9 +2005,18 @@ function MeetingCanvas({
   fallbackName: string;
   localRole: ParticipantRole;
   recordingEnabled: boolean;
+  activeBreakout: BreakoutAssignment | null;
   onModerationMute: () => void;
   onModerationRemove: () => void;
   onAssignRole: (identity: string, role: AssignableRole) => Promise<void>;
+  onJoinBreakout: (credentials: {
+    serverUrl: string;
+    participantToken: string;
+    breakoutId: string;
+    breakoutName: string;
+    active: boolean;
+  }) => Promise<void>;
+  onReturnMain: (assignmentAlreadyClosed?: boolean) => Promise<void>;
 }) {
   const { confirm } = useFeedback();
   const mediaParticipants = useRoomMedia(room, connected);
@@ -1926,6 +2057,22 @@ function MeetingCanvas({
     undefined,
     canManageMeeting,
   );
+  const {
+    current: breakout,
+    activeCount: activeBreakoutCount,
+    busy: breakoutBusy,
+    error: breakoutError,
+    start: startBreakouts,
+    closeAll: closeBreakouts,
+    returnNow: returnFromBreakout,
+  } = useBreakoutRooms({
+    room,
+    eventId,
+    connected,
+    canManage: canManageMeeting,
+    onJoin: onJoinBreakout,
+    onReturn: onReturnMain,
+  });
   const { reactions, sendReaction } = useMeetingReactions(room, connected);
   const {
     captions,
@@ -1948,7 +2095,13 @@ function MeetingCanvas({
     onModerationRemove,
   );
   const [sideTab, setSideTab] = useState<
-    "participants" | "chat" | "poll" | "files" | "transcript" | "notes"
+    | "participants"
+    | "chat"
+    | "poll"
+    | "breakout"
+    | "files"
+    | "transcript"
+    | "notes"
   >("participants");
   const [view, setView] = useState<MeetingRecordingLayout>("gallery");
   const [chatText, setChatText] = useState("");
@@ -2110,6 +2263,12 @@ function MeetingCanvas({
             onClick={() => setSideTab("files")}
           >
             <Download size={15} /> Dateien
+          </button>
+          <button
+            className={sideTab === "breakout" ? "active" : ""}
+            onClick={() => setSideTab("breakout")}
+          >
+            <DoorOpen size={15} /> Gruppen
           </button>
           <button
             className={sideTab === "notes" ? "active" : ""}
@@ -2326,6 +2485,26 @@ function MeetingCanvas({
             onClose={closePoll}
             onClear={clearPoll}
           />
+        ) : sideTab === "breakout" ? (
+          <BreakoutRoomsPanel
+            participants={participants.map(
+              ({ identity, name, isLocal, role }) => ({
+                identity,
+                name,
+                isLocal,
+                role,
+              }),
+            )}
+            connected={connected}
+            canManage={canManageMeeting}
+            current={breakout || activeBreakout}
+            activeCount={activeBreakoutCount}
+            busy={breakoutBusy}
+            error={breakoutError}
+            onStart={startBreakouts}
+            onClose={closeBreakouts}
+            onReturn={returnFromBreakout}
+          />
         ) : sideTab === "files" ? (
           <MeetingFiles
             eventId={eventId}
@@ -2351,14 +2530,16 @@ function MeetingCanvas({
           pollError ||
           attendanceError ||
           captionsError ||
-          spotlight.error) && (
+          spotlight.error ||
+          breakoutError) && (
           <div className="inline-error">
             {collaborationError ||
               chatError ||
               pollError ||
               attendanceError ||
               captionsError ||
-              spotlight.error}
+              spotlight.error ||
+              breakoutError}
           </div>
         )}
         <MeetingRecorder

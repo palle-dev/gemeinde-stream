@@ -40,6 +40,8 @@ Teilnehmer können – sofern die Chromium-System-Spracherkennung auf dem Rechne
 
 Host, Co-Host und Operator können eine Kamera oder Bildschirmfreigabe als Spotlight für alle hervorheben. Der Zustand wird serverseitig autorisiert und nach Neuverbindungen wiederhergestellt. Unabhängig davon kann jeder Teilnehmer eine Quelle ausschließlich für die eigene Ansicht anheften.
 
+Host, Co-Host und Operator können zugelassene Teilnehmer auf zwei bis acht Breakout-Räume verteilen und die Gruppennamen sowie Zuweisungen anpassen. Jeder Zugang erhält ein kurzlebiges, ausschließlich für den zugewiesenen LiveKit-Raum gültiges Token. Kamera und Mikrofon werden beim Wechsel wiederhergestellt; Bildschirmfreigaben müssen aus Datenschutzgründen bewusst neu gestartet werden. Beim Schließen kehren alle Teilnehmer automatisch in den Hauptraum zurück.
+
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.

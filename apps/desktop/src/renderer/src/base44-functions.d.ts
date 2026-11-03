@@ -17,5 +17,6 @@ declare module "@base44/sdk" {
     "meeting-files": true;
     "meeting-poll": true;
     "meeting-spotlight": true;
+    "breakout-room": true;
   }
 }
