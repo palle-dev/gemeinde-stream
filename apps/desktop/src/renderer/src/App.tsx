@@ -3,6 +3,7 @@ import { RoomEvent, Track } from "livekit-client";
 import desktopPackage from "../../../package.json";
 import {
   ArrowLeft,
+  BarChart3,
   CalendarDays,
   Camera,
   CameraOff,
@@ -61,6 +62,10 @@ import {
 } from "./components/MeetingAttendance";
 import { MeetingNotes } from "./components/MeetingNotes";
 import { MeetingFiles } from "./components/MeetingFiles";
+import {
+  MeetingPollPanel,
+  useMeetingPoll,
+} from "./components/MeetingPolls";
 import {
   MEETING_REACTIONS,
   useMeetingReactions,
@@ -1893,6 +1898,16 @@ function MeetingCanvas({
     connected,
     fallbackName,
   );
+  const {
+    poll,
+    history: pollHistory,
+    error: pollError,
+    busy: pollBusy,
+    openPoll,
+    vote,
+    closePoll,
+    clearPoll,
+  } = useMeetingPoll(room, connected, eventId, undefined, canManageMeeting);
   const { reactions, sendReaction } = useMeetingReactions(room, connected);
   const participants = mediaParticipants.map((participant) => ({
     ...participant,
@@ -1906,7 +1921,7 @@ function MeetingCanvas({
     onModerationRemove,
   );
   const [sideTab, setSideTab] = useState<
-    "participants" | "chat" | "files" | "notes"
+    "participants" | "chat" | "poll" | "files" | "notes"
   >("participants");
   const [view, setView] = useState<MeetingRecordingLayout>("gallery");
   const [chatText, setChatText] = useState("");
@@ -2052,6 +2067,12 @@ function MeetingCanvas({
             onClick={() => setSideTab("chat")}
           >
             <MessageSquare size={15} /> Chat
+          </button>
+          <button
+            className={sideTab === "poll" ? "active" : ""}
+            onClick={() => setSideTab("poll")}
+          >
+            <BarChart3 size={15} /> Umfrage
           </button>
           <button
             className={sideTab === "files" ? "active" : ""}
@@ -2236,6 +2257,20 @@ function MeetingCanvas({
               </button>
             </form>
           </div>
+        ) : sideTab === "poll" ? (
+          <MeetingPollPanel
+            poll={poll}
+            history={pollHistory}
+            meetingTitle={title}
+            canManage={canManageMeeting}
+            connected={connected}
+            busy={pollBusy}
+            error={pollError}
+            onOpen={openPoll}
+            onVote={vote}
+            onClose={closePoll}
+            onClear={clearPoll}
+          />
         ) : sideTab === "files" ? (
           <MeetingFiles
             eventId={eventId}
@@ -2250,9 +2285,9 @@ function MeetingCanvas({
             room={room}
           />
         )}
-        {(collaborationError || chatError || attendanceError) && (
+        {(collaborationError || chatError || pollError || attendanceError) && (
           <div className="inline-error">
-            {collaborationError || chatError || attendanceError}
+            {collaborationError || chatError || pollError || attendanceError}
           </div>
         )}
         <MeetingRecorder

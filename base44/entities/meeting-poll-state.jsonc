@@ -1,0 +1,30 @@
+{
+  "name": "MeetingPollState",
+  "type": "object",
+  "properties": {
+    "event_id": { "type": "string" },
+    "owner_email": { "type": "string", "format": "email" },
+    "poll_id": { "type": "string" },
+    "question": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": { "id": { "type": "string" }, "label": { "type": "string", "maxLength": 100 } },
+        "required": ["id", "label"]
+      }
+    },
+    "open": { "type": "boolean", "default": true },
+    "active": { "type": "boolean", "default": true },
+    "show_results_while_open": { "type": "boolean", "default": true },
+    "revision": { "type": "integer", "minimum": 1, "default": 1 },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["event_id", "owner_email", "poll_id", "question", "options", "open", "revision", "updated_at"],
+  "rls": {
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
+  }
+}

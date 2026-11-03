@@ -34,6 +34,8 @@ Alle zugelassenen Teilnehmer außer Zuschauern können gemeinsame Meeting-Notize
 
 Angemeldete Teilnehmer können PDF-, Office-, Text- und Bilddateien bis 25 MB privat zum Meeting bereitstellen. Das Backend autorisiert jeden Upload vorab, speichert nur private Dateiverweise und erzeugt beim Abruf kurzlebige Downloadlinks. Entfernen dürfen nur der ursprüngliche Uploader oder die Moderation.
 
+Host, Co-Host und Operator können Live-Umfragen mit zwei bis sechs Antworten starten. Jeder Teilnehmer stimmt genau einmal ab; Zwischenstände können bis zum Ende verborgen bleiben. Abgeschlossene Ergebnisse bleiben in der Historie erhalten und lassen sich als CSV exportieren.
+
 In Live-Produktionen verteilt der Master jeden TAKE einschließlich Layout und Übergang an alle verbundenen Clients. Später beitretende Teilnehmer erhalten automatisch das aktuelle Programmbild; schalten dürfen nur Host, Co-Host und Operator.
 
 Die Regie kann das aktuelle Programmbild als separates, bedienungsfreies 1080p60-Fenster öffnen. Es eignet sich für einen zweiten Bildschirm, Beamer, eine Capture-Karte oder als Fensterquelle in OBS; Layoutwechsel und TAKE werden unmittelbar übernommen.

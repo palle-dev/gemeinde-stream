@@ -15,6 +15,7 @@ const functions = [
   "meeting-attendance",
   "meeting-notes",
   "meeting-files",
+  "meeting-poll",
 ];
 
 console.log(

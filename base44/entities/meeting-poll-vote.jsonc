@@ -1,0 +1,17 @@
+{
+  "name": "MeetingPollVote",
+  "type": "object",
+  "properties": {
+    "event_id": { "type": "string" },
+    "poll_id": { "type": "string" },
+    "voter_identity": { "type": "string", "maxLength": 200 },
+    "option_id": { "type": "string", "maxLength": 100 }
+  },
+  "required": ["event_id", "poll_id", "voter_identity", "option_id"],
+  "rls": {
+    "create": { "user_condition": { "role": "admin" } },
+    "read": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
+  }
+}
