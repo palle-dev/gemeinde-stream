@@ -72,6 +72,31 @@ export function mediaConnectionMessage(
   }
 }
 
+export function mediaServerDisplayName(serverUrl: string): string {
+  try {
+    const parsed = new URL(serverUrl);
+    const host = parsed.port
+      ? `${parsed.hostname}:${parsed.port}`
+      : parsed.hostname;
+    switch (mediaServerScope(serverUrl)) {
+      case "local":
+        return `Lokaler LiveKit-Server · ${host}`;
+      case "private":
+        return `Privater LiveKit-Server · ${host}`;
+      case "public-secure":
+        return parsed.hostname.toLowerCase().endsWith(".livekit.cloud")
+          ? `LiveKit Cloud · ${host}`
+          : `LiveKit · ${host}`;
+      case "public-insecure":
+        return `Unverschlüsselter LiveKit-Server · ${host}`;
+      default:
+        return "LiveKit-Server unbekannt";
+    }
+  } catch {
+    return "LiveKit-Server unbekannt";
+  }
+}
+
 export interface MediaPreferences {
   displayName: string;
   microphoneEnabled: boolean;

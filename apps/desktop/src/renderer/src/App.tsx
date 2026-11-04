@@ -48,6 +48,7 @@ import {
   MediaRoom,
   connectionStatusMessage,
   mediaConnectionMessage,
+  mediaServerDisplayName,
   mediaServerScope,
   type ConnectionState,
   type MediaPreferences,
@@ -1430,6 +1431,7 @@ function Studio({
   const [mediaMessage, setMediaMessage] = useState(
     "Medienserver noch nicht verbunden",
   );
+  const [mediaServerUrl, setMediaServerUrl] = useState("");
   const [mic, setMic] = useState(false);
   const [camera, setCamera] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -1509,6 +1511,7 @@ function Studio({
       if (!credentials.serverUrl || !credentials.participantToken)
         throw new Error("Der Medienzugang ist unvollständig.");
       serverUrl = credentials.serverUrl;
+      setMediaServerUrl(serverUrl);
       await media.connect(serverUrl, credentials.participantToken);
       setCanControlProgram(Boolean(credentials.canControlProgram));
       setParticipantRole(credentials.role);
@@ -1561,6 +1564,7 @@ function Studio({
     const restoreSharing = sharing;
     const warnings: string[] = [];
     await media.disconnect();
+    setMediaServerUrl(credentials.serverUrl);
     await media.connect(credentials.serverUrl, credentials.participantToken);
     try {
       await media.applyDevices(preferences);
@@ -1867,7 +1871,12 @@ function Studio({
           aria-live="polite"
         >
           {readyForControls ? <Wifi /> : <WifiOff />}
-          <span>{connectionMessage}</span>
+          <div className="connection-text" title={mediaServerUrl || undefined}>
+            <span>{connectionMessage}</span>
+            {mediaServerUrl ? (
+              <small>{mediaServerDisplayName(mediaServerUrl)}</small>
+            ) : null}
+          </div>
         </div>
         <div className="code-pill">
           <small>Raumcode</small>

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { RoomEvent } from "livekit-client";
-import { MediaRoom, connectionStatusMessage, mediaConnectionMessage, mediaServerScope } from "./room";
+import { MediaRoom, connectionStatusMessage, mediaConnectionMessage, mediaServerDisplayName, mediaServerScope } from "./room";
 
 describe("media server diagnostics", () => {
   it("distinguishes local, private and public media servers", () => {
@@ -20,6 +20,15 @@ describe("media server diagnostics", () => {
   it("rejects an unencrypted public signaling address", () => {
     expect(mediaConnectionMessage(new Error("failed"), "ws://video.gemeinde.de"))
       .toContain("verschlüsselte WSS-Verbindung");
+  });
+
+  it("shows the active server without exposing credentials", () => {
+    expect(mediaServerDisplayName("wss://gemeindestream-wskl4s75.livekit.cloud"))
+      .toBe("LiveKit Cloud · gemeindestream-wskl4s75.livekit.cloud");
+    expect(mediaServerDisplayName("ws://localhost:7880"))
+      .toBe("Lokaler LiveKit-Server · localhost:7880");
+    expect(mediaServerDisplayName("not a url"))
+      .toBe("LiveKit-Server unbekannt");
   });
 });
 
