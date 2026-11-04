@@ -818,6 +818,9 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // A live production must keep WebRTC, meters and program rendering active
+      // while the operator works in another application or the window is hidden.
+      backgroundThrottling: false,
     },
   });
   mainWindow = window;
@@ -906,6 +909,7 @@ function createWindow(): void {
             contextIsolation: true,
             nodeIntegration: false,
             sandbox: true,
+            backgroundThrottling: false,
           },
         },
       };
