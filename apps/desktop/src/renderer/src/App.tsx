@@ -171,6 +171,12 @@ import {
   productAllowsRoom,
   productRoomError,
 } from "./productVariant";
+import {
+  normalizeAuthEmail,
+  normalizeOtpCode,
+  validOtpCode,
+  verifyAndLoginRegistration,
+} from "./lib/authRegistration";
 
 type FunctionEnvelope<T> = T | { data: T };
 
@@ -312,7 +318,10 @@ function Login({
     setError("");
     setNotice("");
     try {
-      await base44.auth.resendOtp(email);
+      const normalizedEmail = normalizeAuthEmail(email);
+      await base44.auth.resendOtp(normalizedEmail);
+      setEmail(normalizedEmail);
+      setOtp("");
       setNotice("Ein neuer Bestätigungscode wurde versendet.");
     } catch (cause) {
       setError(messageOf(cause));
@@ -327,23 +336,48 @@ function Login({
     setError("");
     try {
       if (view === "register") {
-        await base44.auth.register({ email, password });
+        const normalizedEmail = normalizeAuthEmail(email);
+        await base44.auth.register({ email: normalizedEmail, password });
+        setEmail(normalizedEmail);
+        setOtp("");
+        setNotice("Bitte verwenden Sie den zuletzt zugesandten Code.");
         setView("verify");
         return;
       }
 
       if (view === "verify") {
-        await base44.auth.verifyOtp({ email, otpCode: otp });
-        const response = await base44.auth.loginViaEmailPassword(
-          email,
+        const normalizedEmail = normalizeAuthEmail(email);
+        const normalizedOtp = normalizeOtpCode(otp);
+        if (!validOtpCode(normalizedOtp)) {
+          setError("Der Bestätigungscode muss aus sechs Ziffern bestehen.");
+          return;
+        }
+        const response = await verifyAndLoginRegistration(
+          base44.auth,
+          normalizedEmail,
           password,
+          normalizedOtp,
         );
-        const updated = await base44.auth.updateMe({ full_name: fullName });
-        onAuthenticated((updated || response.user) as UserInfo);
+        let authenticatedUser = response.user as UserInfo;
+        if (fullName.trim() && !authenticatedUser.full_name) {
+          try {
+            authenticatedUser = (await base44.auth.updateMe({
+              full_name: fullName.trim(),
+            })) as UserInfo;
+          } catch {
+            // Profile enrichment must never turn a completed registration into
+            // an apparent OTP failure. The name can still be set before joining.
+          }
+        }
+        onAuthenticated(authenticatedUser);
         return;
       }
 
-      const response = await base44.auth.loginViaEmailPassword(email, password);
+      const normalizedEmail = normalizeAuthEmail(email);
+      const response = await base44.auth.loginViaEmailPassword(
+        normalizedEmail,
+        password,
+      );
       onAuthenticated(response.user as UserInfo);
     } catch (cause) {
       setError(messageOf(cause));
@@ -462,9 +496,11 @@ function Login({
               <input
                 className="otp-input"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\s/g, ""))}
+                onChange={(e) => setOtp(normalizeOtpCode(e.target.value))}
                 placeholder="123456"
                 inputMode="numeric"
+                pattern="[0-9]{6}"
+                maxLength={6}
                 autoComplete="one-time-code"
                 required
                 autoFocus
