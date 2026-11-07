@@ -194,8 +194,19 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           pattern: release-*
-          path: release-assets
-          merge-multiple: true
+          path: release-downloads
+      - name: Release-Dateien zusammenführen
+        run: |
+          mkdir release-assets
+          while IFS= read -r -d '' package; do
+            target="release-assets/$(basename "$package")"
+            if [ -e "$target" ]; then
+              echo "Doppelter Release-Dateiname: $target" >&2
+              exit 1
+            fi
+            cp "$package" "$target"
+          done < <(find release-downloads -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.zip' \) -print0)
+          test "$(find release-assets -type f | wc -l)" -eq 10
       - name: Prüfsummen erzeugen
         working-directory: release-assets
         run: sha256sum * > SHA256SUMS.txt
