@@ -24,6 +24,7 @@ jobs:
     env:
       CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
       CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      WINDOWS_SIGNING_ENABLED: ${{ secrets.WINDOWS_CERTIFICATE != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -36,7 +37,9 @@ jobs:
       - name: Windows-Signaturkonfiguration prüfen
         shell: pwsh
         run: |
-          if (-not $env:CSC_LINK -or -not $env:CSC_KEY_PASSWORD) { throw "Windows-Code-Signing-Secrets fehlen." }
+          if ($env:WINDOWS_SIGNING_ENABLED -ne "true") {
+            Write-Warning "Windows-Code-Signing-Secrets fehlen; Installer wird unsigniert als Vorab-Release gebaut."
+          }
       - name: Prüfen und Windows-Installer bauen
         run: |
           npm run typecheck
@@ -49,6 +52,10 @@ jobs:
         run: |
           $installers = Get-ChildItem "apps/desktop/release/*.exe", "apps/desktop/release-meeting/*.exe"
           if ($installers.Count -eq 0) { throw "Kein Windows-Installer gefunden." }
+          if ($env:WINDOWS_SIGNING_ENABLED -ne "true") {
+            Write-Warning "Signaturprüfung übersprungen: unsigniertes Vorab-Release."
+            exit 0
+          }
           foreach ($installer in $installers) {
             $signature = Get-AuthenticodeSignature $installer.FullName
             if ($signature.Status -ne "Valid") {
@@ -83,6 +90,8 @@ jobs:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      MACOS_SIGNING_ENABLED: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' }}
+      MACOS_NOTARIZATION_ENABLED: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -94,13 +103,19 @@ jobs:
         run: npm audit --audit-level=high
       - name: Signaturkonfiguration prüfen
         run: |
-          test -n "$CSC_LINK"
-          test -n "$CSC_KEY_PASSWORD"
-          test -n "$APPLE_ID"
-          test -n "$APPLE_APP_SPECIFIC_PASSWORD"
-          test -n "$APPLE_TEAM_ID"
+          if [ "$MACOS_SIGNING_ENABLED" != "true" ]; then
+            echo "::warning::macOS-Code-Signing-Secrets fehlen; Pakete werden unsigniert als Vorab-Release gebaut."
+          elif [ "$MACOS_NOTARIZATION_ENABLED" != "true" ]; then
+            echo "::warning::Apple-Notarisierungsdaten fehlen; Pakete werden ohne Notarisierung als Vorab-Release gebaut."
+          fi
       - name: Prüfen, signieren und notarisiertes macOS-Paket bauen
         run: |
+          if [ "$MACOS_SIGNING_ENABLED" != "true" ]; then
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+          elif [ "$MACOS_NOTARIZATION_ENABLED" != "true" ]; then
+            unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+          fi
           npm run typecheck
           npm test
           npm run stream:smoke
@@ -108,18 +123,26 @@ jobs:
           npm run dist:meeting:mac
       - name: Code-Signatur und Notarisierung verifizieren
         run: |
+          if [ "$MACOS_SIGNING_ENABLED" != "true" ]; then
+            echo "::warning::Signatur- und Notarisierungsprüfung übersprungen: unsigniertes Vorab-Release."
+            exit 0
+          fi
           studio_bundle=$(find apps/desktop/release -name 'Gemeinde Stream.app' -type d | head -1)
           meeting_bundle=$(find apps/desktop/release-meeting -name 'Gemeinde Meeting.app' -type d | head -1)
           test -n "$studio_bundle"
           test -n "$meeting_bundle"
           for app_bundle in "$studio_bundle" "$meeting_bundle"; do
             codesign --verify --deep --strict --verbose=2 "$app_bundle"
-            spctl --assess --type execute --verbose=2 "$app_bundle"
-            xcrun stapler validate "$app_bundle"
+            if [ "$MACOS_NOTARIZATION_ENABLED" = "true" ]; then
+              spctl --assess --type execute --verbose=2 "$app_bundle"
+              xcrun stapler validate "$app_bundle"
+            fi
           done
-          for package in apps/desktop/release/*.dmg apps/desktop/release-meeting/*.dmg; do
-            xcrun stapler validate "$package"
-          done
+          if [ "$MACOS_NOTARIZATION_ENABLED" = "true" ]; then
+            for package in apps/desktop/release/*.dmg apps/desktop/release-meeting/*.dmg; do
+              xcrun stapler validate "$package"
+            done
+          fi
       - name: macOS-Pakete, Bundle und Architektur prüfen
         run: |
           app_bundle=$(find apps/desktop/release -name 'Gemeinde Stream.app' -type d | head -1)
@@ -179,4 +202,8 @@ jobs:
       - name: GitHub-Release veröffentlichen
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release-assets/* --generate-notes --title "Gemeinde Stream $GITHUB_REF_NAME"
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
+            --generate-notes \
+            --prerelease \
+            --title "Gemeinde Stream $GITHUB_REF_NAME"
